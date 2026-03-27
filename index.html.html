@@ -1,0 +1,462 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tablero de Control — Novedades PAE</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'Segoe UI', Arial, sans-serif; background: #f0f4f8; color: #1a2332; font-size: 13px; }
+
+.topbar {
+  background: #1F4E79; color: #fff;
+  padding: 12px 20px;
+  display: flex; align-items: center; justify-content: space-between;
+}
+.topbar h1 { font-size: 16px; font-weight: 600; }
+.topbar .meta { font-size: 11px; opacity: 0.75; margin-top: 2px; }
+.refresh-btn {
+  background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.3);
+  color: #fff; padding: 6px 14px; border-radius: 6px; cursor: pointer;
+  font-size: 12px; font-weight: 500;
+}
+.refresh-btn:hover { background: rgba(255,255,255,0.25); }
+
+.main { padding: 16px 20px; }
+
+.cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; margin-bottom: 16px; }
+.card {
+  background: #fff; border-radius: 8px; padding: 12px 14px;
+  border-left: 3px solid #ccc;
+}
+.card .label { font-size: 11px; color: #666; margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.5px; }
+.card .value { font-size: 26px; font-weight: 700; line-height: 1; }
+.card .sub   { font-size: 11px; color: #888; margin-top: 4px; }
+.card.blue  { border-left-color: #2E75B6; } .card.blue  .value { color: #1F4E79; }
+.card.green { border-left-color: #27AE60; } .card.green .value { color: #1E5631; }
+.card.amber { border-left-color: #E67E22; } .card.amber .value { color: #7D5A00; }
+.card.red   { border-left-color: #C0392B; } .card.red   .value { color: #8B0000; }
+.card.gray  { border-left-color: #7f8c8d; } .card.gray  .value { color: #444; }
+
+.section-title {
+  font-size: 12px; font-weight: 600; color: #2E75B6;
+  text-transform: uppercase; letter-spacing: 0.8px;
+  margin: 16px 0 8px; padding-bottom: 4px;
+  border-bottom: 1px solid #c5d8ec;
+}
+
+.filters {
+  display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 10px;
+}
+.filters select, .filters input {
+  border: 1px solid #d0dce8; border-radius: 5px;
+  padding: 5px 10px; font-size: 12px; background: #fff; color: #1a2332;
+  outline: none;
+}
+.filters select:focus, .filters input:focus { border-color: #2E75B6; }
+
+.table-wrap { overflow-x: auto; border-radius: 8px; border: 1px solid #d0dce8; }
+table { width: 100%; border-collapse: collapse; font-size: 12px; min-width: 700px; }
+thead tr { background: #1F4E79; color: #fff; }
+thead th { padding: 9px 10px; text-align: left; font-weight: 600; white-space: nowrap; }
+tbody tr { border-bottom: 1px solid #e8edf2; }
+tbody tr:hover { filter: brightness(0.97); }
+tbody td { padding: 7px 10px; vertical-align: top; }
+.desc-cell { max-width: 320px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+.badge {
+  display: inline-block; padding: 2px 7px; border-radius: 10px;
+  font-size: 10px; font-weight: 600; white-space: nowrap;
+}
+
+.status-select {
+  border: 1px solid #d0dce8; border-radius: 4px;
+  padding: 2px 6px; font-size: 11px; background: #fff; cursor: pointer;
+}
+
+.pagination {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-top: 10px; font-size: 12px; color: #666;
+}
+.pagination button {
+  border: 1px solid #d0dce8; background: #fff; border-radius: 5px;
+  padding: 4px 12px; cursor: pointer; font-size: 12px;
+}
+.pagination button:hover { background: #f0f4f8; }
+.pagination button:disabled { opacity: 0.4; cursor: default; }
+
+.alerta-banner {
+  background: #FDEDEC; border: 1px solid #F7C1C1; border-radius: 6px;
+  padding: 8px 12px; margin-bottom: 10px; font-size: 12px;
+  color: #7B241C; font-weight: 500;
+}
+
+.spinner {
+  text-align: center; padding: 40px; color: #666; font-size: 14px;
+}
+
+.no-data { text-align: center; padding: 30px; color: #999; }
+
+.grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 16px; }
+@media (max-width: 600px) { .grid2 { grid-template-columns: 1fr; } }
+
+.mini-table { width: 100%; font-size: 12px; border-collapse: collapse; }
+.mini-table td { padding: 5px 8px; border-bottom: 1px solid #eee; }
+.mini-table tr:last-child td { border-bottom: none; }
+.mini-table .num { font-weight: 600; text-align: right; }
+
+.barra-wrap { background: #f0f4f8; border-radius: 4px; height: 8px; overflow: hidden; }
+.barra { height: 8px; border-radius: 4px; }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div>
+    <div class="h1">Tablero de Control — Novedades Operativas PAE</div>
+    <div class="meta" id="last-update">Cargando datos...</div>
+  </div>
+  <button class="refresh-btn" onclick="loadData()">Actualizar</button>
+</div>
+
+<div class="main">
+  <div id="loading" class="spinner">Conectando con Google Sheets...</div>
+  <div id="content" style="display:none">
+
+    <div id="alertas"></div>
+
+    <div class="cards" id="cards"></div>
+
+    <div class="grid2">
+      <div>
+        <div class="section-title">Eventos por categoría</div>
+        <div style="background:#fff;border-radius:8px;border:1px solid #d0dce8;padding:12px" id="cat-chart"></div>
+      </div>
+      <div>
+        <div class="section-title">Eventos eléctricos abiertos</div>
+        <div style="background:#fff;border-radius:8px;border:1px solid #d0dce8;padding:12px" id="open-events"></div>
+      </div>
+    </div>
+
+    <div class="section-title">Registro de novedades</div>
+    <div class="filters">
+      <input type="text"    id="f-buscar"     placeholder="Buscar..." style="width:160px" oninput="applyFilters()">
+      <select id="f-cat"    onchange="applyFilters()"><option value="">Todas las categorías</option></select>
+      <select id="f-sub"    onchange="applyFilters()"><option value="">Todas las subcategorías</option></select>
+      <select id="f-accion" onchange="applyFilters()"><option value="">Todas las acciones</option></select>
+      <select id="f-estado" onchange="applyFilters()">
+        <option value="">Todos los estados</option>
+        <option value="Pendiente">Pendiente</option>
+        <option value="Resuelto">Resuelto</option>
+        <option value="En curso">En curso</option>
+      </select>
+      <input type="date" id="f-desde" onchange="applyFilters()" style="width:130px">
+      <input type="date" id="f-hasta" onchange="applyFilters()" style="width:130px">
+    </div>
+
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th style="width:80px" onclick="sortBy('Fecha')" style="cursor:pointer">Fecha</th>
+            <th style="width:60px">Hora</th>
+            <th style="width:130px">Remitente</th>
+            <th style="width:100px">Categoría</th>
+            <th style="width:110px">Subcategoría</th>
+            <th style="width:80px">Acción</th>
+            <th style="width:140px">Equipos</th>
+            <th style="width:80px">Estado</th>
+            <th>Descripción</th>
+          </tr>
+        </thead>
+        <tbody id="table-body"></tbody>
+      </table>
+    </div>
+    <div class="pagination">
+      <span id="pag-info"></span>
+      <div style="display:flex;gap:6px">
+        <button id="btn-prev" onclick="changePage(-1)">Anterior</button>
+        <button id="btn-next" onclick="changePage(1)">Siguiente</button>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+const SHEET_ID = '180-bBQBJrOZMTfVQZD-tDyjHqEfPrB_yGHFiIRrQiNo';
+const SHEET_NAME = 'Novedades Operativas';
+const PAGE_SIZE = 50;
+
+let allData = [];
+let filtered = [];
+let currentPage = 0;
+let sortCol = 'Fecha';
+let sortAsc = false;
+
+const COLOR_MAP = {
+  'Arranque':  { bg:'#C6EFCE', color:'#276221' },
+  'Paro':      { bg:'#FFEB9C', color:'#7D6608' },
+  'Disparo':   { bg:'#FF9999', color:'#8B0000' },
+  'Recierre':  { bg:'#FCE4D6', color:'#843C0C' },
+  'Apertura':  { bg:'#F4CCCC', color:'#660000' },
+  'Cierre':    { bg:'#D9EAD3', color:'#1E4620' },
+  'Falla':     { bg:'#EA9999', color:'#660000' },
+  'Maniobra':  { bg:'#CFE2F3', color:'#1F4E79' },
+  'Evento':    { bg:'#F2F2F2', color:'#444444' },
+};
+
+async function loadData() {
+  document.getElementById('loading').style.display = 'block';
+  document.getElementById('content').style.display = 'none';
+
+  const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(SHEET_NAME)}`;
+
+  try {
+    const resp = await fetch(url);
+    if (!resp.ok) throw new Error('No se pudo conectar');
+    const text = await resp.text();
+    allData = parseCSV(text);
+    applyFilters();
+    buildFilters();
+    renderCards();
+    renderCatChart();
+    renderOpenEvents();
+    renderAlertas();
+    document.getElementById('last-update').textContent =
+      'Última actualización: ' + new Date().toLocaleTimeString('es-AR');
+    document.getElementById('loading').style.display = 'none';
+    document.getElementById('content').style.display = 'block';
+  } catch(e) {
+    document.getElementById('loading').innerHTML =
+      `<div style="color:#C0392B;padding:20px">
+        <strong>No se pudo cargar la planilla.</strong><br>
+        Asegurate de que la planilla sea pública:<br>
+        Google Sheets → Compartir → "Cualquier persona con el enlace puede ver"<br><br>
+        <small style="color:#888">${e.message}</small>
+      </div>`;
+  }
+}
+
+function parseCSV(text) {
+  const lines = text.split('\n').filter(l => l.trim());
+  if (lines.length < 2) return [];
+  const headers = parseCSVLine(lines[0]);
+  const rows = [];
+  for (let i = 1; i < lines.length; i++) {
+    const vals = parseCSVLine(lines[i]);
+    if (!vals[0]) continue;
+    const obj = {};
+    headers.forEach((h, idx) => { obj[h.replace(/"/g,'')] = (vals[idx]||'').replace(/"/g,'').trim(); });
+    rows.push(obj);
+  }
+  return rows;
+}
+
+function parseCSVLine(line) {
+  const result = []; let cur = ''; let inQ = false;
+  for (let i = 0; i < line.length; i++) {
+    const c = line[i];
+    if (c === '"') { inQ = !inQ; }
+    else if (c === ',' && !inQ) { result.push(cur); cur = ''; }
+    else { cur += c; }
+  }
+  result.push(cur);
+  return result;
+}
+
+function applyFilters() {
+  const buscar = document.getElementById('f-buscar').value.toLowerCase();
+  const cat    = document.getElementById('f-cat').value;
+  const sub    = document.getElementById('f-sub').value;
+  const accion = document.getElementById('f-accion').value;
+  const estado = document.getElementById('f-estado').value;
+  const desde  = document.getElementById('f-desde').value;
+  const hasta  = document.getElementById('f-hasta').value;
+
+  filtered = allData.filter(r => {
+    if (cat    && r['Categoría']    !== cat)    return false;
+    if (sub    && r['Subcategoría'] !== sub)    return false;
+    if (accion && r['Acción']       !== accion) return false;
+    if (estado && r['Estado']       !== estado) return false;
+    if (buscar && !JSON.stringify(r).toLowerCase().includes(buscar)) return false;
+    if (desde || hasta) {
+      const parts = (r['Fecha']||'').split('/');
+      if (parts.length === 3) {
+        const d = `${parts[2]}-${parts[1].padStart(2,'0')}-${parts[0].padStart(2,'0')}`;
+        if (desde && d < desde) return false;
+        if (hasta && d > hasta) return false;
+      }
+    }
+    return true;
+  });
+
+  currentPage = 0;
+  renderTable();
+}
+
+function buildFilters() {
+  const cats    = [...new Set(allData.map(r => r['Categoría']).filter(Boolean))].sort();
+  const subs    = [...new Set(allData.map(r => r['Subcategoría']).filter(Boolean))].sort();
+  const accions = [...new Set(allData.map(r => r['Acción']).filter(Boolean))].sort();
+
+  const populate = (id, vals) => {
+    const sel = document.getElementById(id);
+    const first = sel.options[0];
+    sel.innerHTML = '';
+    sel.appendChild(first);
+    vals.forEach(v => { const o = document.createElement('option'); o.value = o.textContent = v; sel.appendChild(o); });
+  };
+  populate('f-cat', cats);
+  populate('f-sub', subs);
+  populate('f-accion', accions);
+}
+
+function renderCards() {
+  const total    = allData.length;
+  const hoy      = new Date(); const hoyStr = `${hoy.getDate()}/${hoy.getMonth()+1}/${hoy.getFullYear()}`;
+  const hoyCount = allData.filter(r => r['Fecha'] === hoyStr).length;
+  const pending  = allData.filter(r => r['Estado'] === 'Pendiente' || !r['Estado']).length;
+  const disparos = allData.filter(r => r['Acción'] === 'Disparo').length;
+  const abiertos = allData.filter(r =>
+    ['Apertura','Falla','Recierre'].includes(r['Acción']) &&
+    ['Sistema Eléctrico'].includes(r['Categoría']) &&
+    r['Estado'] !== 'Resuelto'
+  ).length;
+
+  document.getElementById('cards').innerHTML = `
+    <div class="card blue"><div class="label">Total histórico</div><div class="value">${total}</div><div class="sub">desde dic 2025</div></div>
+    <div class="card green"><div class="label">Hoy</div><div class="value">${hoyCount}</div><div class="sub">${hoyStr}</div></div>
+    <div class="card amber"><div class="label">Pendientes</div><div class="value">${pending}</div><div class="sub">sin resolver</div></div>
+    <div class="card red"><div class="label">Disparos</div><div class="value">${disparos}</div><div class="sub">total histórico</div></div>
+    <div class="card red"><div class="label">Eventos abiertos</div><div class="value">${abiertos}</div><div class="sub">sist. eléctrico</div></div>
+  `;
+}
+
+function renderCatChart() {
+  const counter = {};
+  const colors  = { 'Generación':'#2E75B6','Sistema Eléctrico':'#C0392B','Maniobra':'#27AE60' };
+  allData.forEach(r => {
+    const k = r['Categoría'] || 'Otro';
+    counter[k] = (counter[k]||0) + 1;
+  });
+  const total = allData.length || 1;
+  const sorted = Object.entries(counter).sort((a,b) => b[1]-a[1]);
+  const html = sorted.map(([cat, cnt]) => `
+    <div style="margin-bottom:8px">
+      <div style="display:flex;justify-content:space-between;margin-bottom:3px;font-size:12px">
+        <span style="color:var(--color-text-primary,#1a2332)">${cat}</span>
+        <span style="font-weight:600;color:${colors[cat]||'#666'}">${cnt}</span>
+      </div>
+      <div class="barra-wrap"><div class="barra" style="width:${Math.round(cnt/total*100)}%;background:${colors[cat]||'#888'}"></div></div>
+    </div>
+  `).join('');
+  document.getElementById('cat-chart').innerHTML = html || '<div class="no-data">Sin datos</div>';
+}
+
+function renderOpenEvents() {
+  const open = allData.filter(r =>
+    ['Apertura','Falla','Recierre'].includes(r['Acción']) &&
+    r['Categoría'] === 'Sistema Eléctrico' &&
+    r['Estado'] !== 'Resuelto'
+  ).slice(0,10);
+
+  if (!open.length) {
+    document.getElementById('open-events').innerHTML = '<div style="color:#27AE60;text-align:center;padding:20px;font-weight:500">Sin eventos abiertos</div>';
+    return;
+  }
+
+  const html = `<table class="mini-table">` +
+    open.map(r => {
+      const c = COLOR_MAP[r['Acción']] || COLOR_MAP['Evento'];
+      return `<tr>
+        <td><span class="badge" style="background:${c.bg};color:${c.color}">${r['Acción']}</span></td>
+        <td style="font-weight:500">${r['Equipos Involucrados']||r['Subcategoría']||''}</td>
+        <td style="color:#666">${r['Fecha']} ${r['Hora Evento']||''}</td>
+      </tr>`;
+    }).join('') + `</table>`;
+  document.getElementById('open-events').innerHTML = html;
+}
+
+function renderAlertas() {
+  const disparosHoy = allData.filter(r => {
+    const hoy = new Date(); const hoyStr = `${hoy.getDate()}/${hoy.getMonth()+1}/${hoy.getFullYear()}`;
+    return r['Fecha'] === hoyStr && r['Acción'] === 'Disparo';
+  });
+  const container = document.getElementById('alertas');
+  if (disparosHoy.length) {
+    container.innerHTML = `<div class="alerta-banner">
+      ALERTA: ${disparosHoy.length} disparo(s) registrado(s) hoy —
+      ${disparosHoy.map(r => r['Equipos Involucrados'] || r['Subcategoría']).join(', ')}
+    </div>`;
+  } else {
+    container.innerHTML = '';
+  }
+}
+
+function renderTable() {
+  const start = currentPage * PAGE_SIZE;
+  const page  = filtered.slice(start, start + PAGE_SIZE);
+  const tbody = document.getElementById('table-body');
+
+  if (!page.length) {
+    tbody.innerHTML = `<tr><td colspan="9" class="no-data">Sin resultados</td></tr>`;
+  } else {
+    tbody.innerHTML = page.map(r => {
+      const c = COLOR_MAP[r['Acción']] || COLOR_MAP['Evento'];
+      const isDisparo = r['Acción'] === 'Disparo';
+      return `<tr style="background:${c.bg}">
+        <td style="color:${isDisparo?'#8B0000':'inherit'};font-weight:${isDisparo?'600':'400'}">${r['Fecha']||''}</td>
+        <td>${r['Hora Evento']||r['Hora Mensaje']||''}</td>
+        <td style="font-size:11px">${(r['Remitente']||'').substring(0,22)}</td>
+        <td><span style="font-size:11px;color:${c.color}">${r['Categoría']||''}</span></td>
+        <td><span style="font-size:11px">${r['Subcategoría']||''}</span></td>
+        <td><span class="badge" style="background:${c.bg};color:${c.color};border:1px solid ${c.color}40">${r['Acción']||''}</span></td>
+        <td style="font-size:11px;font-weight:500">${r['Equipos Involucrados']||''}</td>
+        <td><select class="status-select" onchange="updateStatus(this,'${r['Fecha']}','${r['Hora Evento']}')">
+          ${['Pendiente','En curso','Resuelto'].map(s =>
+            `<option${r['Estado']===s?' selected':''}>${s}</option>`).join('')}
+        </select></td>
+        <td class="desc-cell" title="${(r['Descripción']||'').replace(/"/g,'&quot;')}">${r['Descripción']||''}</td>
+      </tr>`;
+    }).join('');
+  }
+
+  const total = filtered.length;
+  document.getElementById('pag-info').textContent =
+    `${start+1}–${Math.min(start+PAGE_SIZE, total)} de ${total} eventos`;
+  document.getElementById('btn-prev').disabled = currentPage === 0;
+  document.getElementById('btn-next').disabled = start + PAGE_SIZE >= total;
+}
+
+function changePage(dir) {
+  currentPage += dir;
+  renderTable();
+  window.scrollTo(0, document.querySelector('.table-wrap').offsetTop - 20);
+}
+
+function updateStatus(sel, fecha, hora) {
+  const row = allData.find(r => r['Fecha'] === fecha && r['Hora Evento'] === hora);
+  if (row) {
+    row['Estado'] = sel.value;
+    renderCards();
+    renderOpenEvents();
+    renderAlertas();
+  }
+}
+
+function sortBy(col) {
+  if (sortCol === col) sortAsc = !sortAsc;
+  else { sortCol = col; sortAsc = true; }
+  filtered.sort((a,b) => {
+    const av = a[col]||'', bv = b[col]||'';
+    return sortAsc ? av.localeCompare(bv) : bv.localeCompare(av);
+  });
+  renderTable();
+}
+
+setInterval(loadData, 60000);
+loadData();
+</script>
+</body>
+</html>
