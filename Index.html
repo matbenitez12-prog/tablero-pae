@@ -1,0 +1,989 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tablero de Control — Novedades PAE</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'Segoe UI', Arial, sans-serif; background: #f0f4f8; color: #1a2332; font-size: 13px; }
+
+.topbar {
+  background: #1F4E79; color: #fff;
+  padding: 12px 20px;
+  display: flex; align-items: center; justify-content: space-between;
+}
+.topbar h1 { font-size: 16px; font-weight: 600; }
+.topbar .meta { font-size: 11px; opacity: 0.75; margin-top: 2px; }
+.refresh-btn {
+  background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.3);
+  color: #fff; padding: 6px 14px; border-radius: 6px; cursor: pointer;
+  font-size: 12px; font-weight: 500;
+}
+.refresh-btn:hover { background: rgba(255,255,255,0.25); }
+
+.main { padding: 16px 20px; }
+
+.cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; margin-bottom: 16px; }
+.card {
+  background: #fff; border-radius: 8px; padding: 12px 14px;
+  border-left: 3px solid #ccc;
+}
+.card .label { font-size: 11px; color: #666; margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.5px; }
+.card .value { font-size: 26px; font-weight: 700; line-height: 1; }
+.card .sub   { font-size: 11px; color: #888; margin-top: 4px; }
+.card.blue  { border-left-color: #2E75B6; } .card.blue  .value { color: #1F4E79; }
+.card.green { border-left-color: #27AE60; } .card.green .value { color: #1E5631; }
+.card.amber { border-left-color: #E67E22; } .card.amber .value { color: #7D5A00; }
+.card.red   { border-left-color: #C0392B; } .card.red   .value { color: #8B0000; }
+.card.gray  { border-left-color: #7f8c8d; } .card.gray  .value { color: #444; }
+
+.section-title {
+  font-size: 12px; font-weight: 600; color: #2E75B6;
+  text-transform: uppercase; letter-spacing: 0.8px;
+  margin: 16px 0 8px; padding-bottom: 4px;
+  border-bottom: 1px solid #c5d8ec;
+}
+
+.filters {
+  display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 10px;
+}
+.filters select, .filters input {
+  border: 1px solid #d0dce8; border-radius: 5px;
+  padding: 5px 10px; font-size: 12px; background: #fff; color: #1a2332;
+  outline: none;
+}
+.filters select:focus, .filters input:focus { border-color: #2E75B6; }
+
+.table-wrap { overflow-x: auto; border-radius: 8px; border: 1px solid #d0dce8; }
+table { width: 100%; border-collapse: collapse; font-size: 12px; min-width: 700px; }
+thead tr { background: #1F4E79; color: #fff; }
+thead th { padding: 9px 10px; text-align: left; font-weight: 600; white-space: nowrap; }
+tbody tr { border-bottom: 1px solid #e8edf2; }
+tbody tr:hover { filter: brightness(0.97); }
+tbody td { padding: 7px 10px; vertical-align: top; }
+.desc-cell { max-width: 320px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+.badge {
+  display: inline-block; padding: 2px 7px; border-radius: 10px;
+  font-size: 10px; font-weight: 600; white-space: nowrap;
+}
+
+.status-select {
+  border: 1px solid #d0dce8; border-radius: 4px;
+  padding: 2px 6px; font-size: 11px; background: #fff; cursor: pointer;
+}
+
+.pagination {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-top: 10px; font-size: 12px; color: #666;
+}
+.pagination button {
+  border: 1px solid #d0dce8; background: #fff; border-radius: 5px;
+  padding: 4px 12px; cursor: pointer; font-size: 12px;
+}
+.pagination button:hover { background: #f0f4f8; }
+.pagination button:disabled { opacity: 0.4; cursor: default; }
+
+.alerta-banner {
+  background: #FDEDEC; border: 1px solid #F7C1C1; border-radius: 6px;
+  padding: 8px 12px; margin-bottom: 10px; font-size: 12px;
+  color: #7B241C; font-weight: 500;
+}
+
+.spinner {
+  text-align: center; padding: 40px; color: #666; font-size: 14px;
+}
+
+.no-data { text-align: center; padding: 30px; color: #999; }
+
+.grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 16px; }
+@media (max-width: 600px) { .grid2 { grid-template-columns: 1fr; } }
+
+.mini-table { width: 100%; font-size: 12px; border-collapse: collapse; }
+.mini-table td { padding: 5px 8px; border-bottom: 1px solid #eee; }
+.mini-table tr:last-child td { border-bottom: none; }
+.mini-table .num { font-weight: 600; text-align: right; }
+
+.barra-wrap { background: #f0f4f8; border-radius: 4px; height: 8px; overflow: hidden; }
+.barra { height: 8px; border-radius: 4px; }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div>
+    <div class="h1">Tablero de Control — Novedades Operativas PAE</div>
+    <div class="meta" id="last-update">Cargando datos...</div>
+  </div>
+  <div style="display:flex;gap:8px;align-items:center">
+    <button class="refresh-btn" onclick="showSection('novedades')" id="btn-nav-nov" style="background:rgba(255,255,255,0.25)">Novedades</button>
+    <button class="refresh-btn" onclick="showSection('maniobras')" id="btn-nav-man">Maniobras MDJ</button>
+    <button class="refresh-btn" onclick="loadData()">Actualizar</button>
+  </div>
+</div>
+
+<div id="section-novedades">
+<div class="main">
+  <div id="loading" class="spinner">Conectando con Google Sheets...</div>
+  <div id="content" style="display:none">
+
+    <div id="alertas"></div>
+
+    <div class="cards" id="cards"></div>
+
+    <div class="grid2">
+      <div>
+        <div class="section-title">Eventos por categoría</div>
+        <div style="background:#fff;border-radius:8px;border:1px solid #d0dce8;padding:12px" id="cat-chart"></div>
+      </div>
+      <div>
+        <div class="section-title">Eventos eléctricos abiertos</div>
+        <div style="background:#fff;border-radius:8px;border:1px solid #d0dce8;padding:12px" id="open-events"></div>
+      </div>
+    </div>
+
+    <div id="machine-stats"></div>
+
+    <div class="section-title">Registro de novedades</div>
+    <div class="filters">
+      <input type="text"    id="f-buscar"     placeholder="Buscar..." style="width:160px" oninput="applyFilters()">
+      <select id="f-cat"    onchange="applyFilters()"><option value="">Todas las categorías</option></select>
+      <select id="f-sub"    onchange="applyFilters()"><option value="">Todas las subcategorías</option></select>
+      <select id="f-accion" onchange="applyFilters()"><option value="">Todas las acciones</option></select>
+      <select id="f-estado" onchange="applyFilters()">
+        <option value="">Todos los estados</option>
+        <option value="Pendiente">Pendiente</option>
+        <option value="Resuelto">Resuelto</option>
+        <option value="En curso">En curso</option>
+      </select>
+      <input type="date" id="f-desde" onchange="applyFilters()" style="width:130px">
+      <input type="date" id="f-hasta" onchange="applyFilters()" style="width:130px">
+    </div>
+
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th style="width:80px" onclick="sortBy('Fecha')" style="cursor:pointer">Fecha</th>
+            <th style="width:60px">Hora</th>
+            <th style="width:130px">Remitente</th>
+            <th style="width:100px">Categoría</th>
+            <th style="width:110px">Subcategoría</th>
+            <th style="width:80px">Acción</th>
+            <th style="width:140px">Equipos</th>
+            <th style="width:80px">Estado</th>
+            <th>Descripción</th>
+          </tr>
+        </thead>
+        <tbody id="table-body"></tbody>
+      </table>
+    </div>
+    <div class="pagination">
+      <span id="pag-info"></span>
+      <div style="display:flex;gap:6px">
+        <button id="btn-prev" onclick="changePage(-1)">Anterior</button>
+        <button id="btn-next" onclick="changePage(1)">Siguiente</button>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+const SHEET_ID = '180-bBQBJrOZMTfVQZD-tDyjHqEfPrB_yGHFiIRrQiNo';
+const SHEET_NAME = 'Novedades Operativas';
+const PAGE_SIZE = 50;
+
+var allData = [];
+let filtered = [];
+let currentPage = 0;
+let sortCol = 'Fecha';
+let sortAsc = false;
+
+const COLOR_MAP = {
+  'Arranque':  { bg:'#C6EFCE', color:'#276221' },
+  'Paro':      { bg:'#FFEB9C', color:'#7D6608' },
+  'Disparo':   { bg:'#FF9999', color:'#8B0000' },
+  'Recierre':  { bg:'#FCE4D6', color:'#843C0C' },
+  'Apertura':  { bg:'#F4CCCC', color:'#660000' },
+  'Cierre':    { bg:'#D9EAD3', color:'#1E4620' },
+  'Falla':     { bg:'#EA9999', color:'#660000' },
+  'Maniobra':  { bg:'#CFE2F3', color:'#1F4E79' },
+  'Evento':    { bg:'#F2F2F2', color:'#444444' },
+};
+
+async function loadData() {
+  document.getElementById('loading').style.display = 'block';
+  document.getElementById('content').style.display = 'none';
+
+  const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(SHEET_NAME)}`;
+
+  try {
+    const resp = await fetch(url);
+    if (!resp.ok) throw new Error('No se pudo conectar');
+    const text = await resp.text();
+    allData = parseCSV(text);
+    applyFilters();
+    buildFilters();
+    renderCards();
+    renderCatChart();
+    renderOpenEvents();
+    renderAlertas();
+    document.getElementById('last-update').textContent =
+      'Última actualización: ' + new Date().toLocaleTimeString('es-AR');
+    document.getElementById('loading').style.display = 'none';
+    document.getElementById('content').style.display = 'block';
+  } catch(e) {
+    document.getElementById('loading').innerHTML =
+      `<div style="color:#C0392B;padding:20px">
+        <strong>No se pudo cargar la planilla.</strong><br>
+        Asegurate de que la planilla sea pública:<br>
+        Google Sheets → Compartir → "Cualquier persona con el enlace puede ver"<br><br>
+        <small style="color:#888">${e.message}</small>
+      </div>`;
+  }
+}
+
+function parseCSV(text) {
+  const lines = text.split('\n').filter(l => l.trim());
+  if (lines.length < 2) return [];
+  const headers = parseCSVLine(lines[0]);
+  const rows = [];
+  for (let i = 1; i < lines.length; i++) {
+    const vals = parseCSVLine(lines[i]);
+    if (!vals[0]) continue;
+    const obj = {};
+    headers.forEach((h, idx) => { obj[h.replace(/"/g,'')] = (vals[idx]||'').replace(/"/g,'').trim(); });
+    rows.push(obj);
+  }
+  return rows;
+}
+
+function parseCSVLine(line) {
+  const result = []; let cur = ''; let inQ = false;
+  for (let i = 0; i < line.length; i++) {
+    const c = line[i];
+    if (c === '"') { inQ = !inQ; }
+    else if (c === ',' && !inQ) { result.push(cur); cur = ''; }
+    else { cur += c; }
+  }
+  result.push(cur);
+  return result;
+}
+
+function applyFilters() {
+  const buscar = document.getElementById('f-buscar').value.toLowerCase();
+  const cat    = document.getElementById('f-cat').value;
+  const sub    = document.getElementById('f-sub').value;
+  const accion = document.getElementById('f-accion').value;
+  const estado = document.getElementById('f-estado').value;
+  const desde  = document.getElementById('f-desde').value;
+  const hasta  = document.getElementById('f-hasta').value;
+
+  filtered = allData.filter(r => {
+    if (cat    && r['Categoría']    !== cat)    return false;
+    if (sub    && r['Subcategoría'] !== sub)    return false;
+    if (accion && r['Acción']       !== accion) return false;
+    if (estado && r['Estado']       !== estado) return false;
+    if (buscar && !JSON.stringify(r).toLowerCase().includes(buscar)) return false;
+    if (desde || hasta) {
+      const parts = (r['Fecha']||'').split('/');
+      if (parts.length === 3) {
+        const d = `${parts[2]}-${parts[1].padStart(2,'0')}-${parts[0].padStart(2,'0')}`;
+        if (desde && d < desde) return false;
+        if (hasta && d > hasta) return false;
+      }
+    }
+    return true;
+  });
+
+  currentPage = 0;
+  renderTable();
+}
+
+function buildFilters() {
+  const cats    = [...new Set(allData.map(r => r['Categoría']).filter(Boolean))].sort();
+  const subs    = [...new Set(allData.map(r => r['Subcategoría']).filter(Boolean))].sort();
+  const accions = [...new Set(allData.map(r => r['Acción']).filter(Boolean))].sort();
+
+  const populate = (id, vals) => {
+    const sel = document.getElementById(id);
+    const first = sel.options[0];
+    sel.innerHTML = '';
+    sel.appendChild(first);
+    vals.forEach(v => { const o = document.createElement('option'); o.value = o.textContent = v; sel.appendChild(o); });
+  };
+  populate('f-cat', cats);
+  populate('f-sub', subs);
+  populate('f-accion', accions);
+}
+
+function renderCards() {
+  const total    = allData.length;
+  const hoy      = new Date(); const hoyStr = `${hoy.getDate()}/${hoy.getMonth()+1}/${hoy.getFullYear()}`;
+  const hoyCount = allData.filter(r => r['Fecha'] === hoyStr).length;
+  const pending  = allData.filter(r => r['Estado'] === 'Pendiente').length;
+  const disparos = allData.filter(r => r['Acción'] === 'Disparo').length;
+  const abiertos = allData.filter(r =>
+    ['Apertura','Falla'].includes(r['Acción']) &&
+    r['Categoría'] === 'Sistema Eléctrico' &&
+    r['Estado'] !== 'Resuelto'
+  ).length;
+  const arranques = allData.filter(r => r['Acción'] === 'Arranque').length;
+  const paros     = allData.filter(r => r['Acción'] === 'Paro').length;
+
+  document.getElementById('cards').innerHTML = `
+    <div class="card blue"><div class="label">Total histórico</div><div class="value">${total}</div><div class="sub">desde dic 2025</div></div>
+    <div class="card green"><div class="label">Hoy</div><div class="value">${hoyCount}</div><div class="sub">${hoyStr}</div></div>
+    <div class="card amber"><div class="label">Pendientes</div><div class="value">${pending}</div><div class="sub">sist. eléctrico</div></div>
+    <div class="card red"><div class="label">Disparos TG</div><div class="value">${disparos}</div><div class="sub">total histórico</div></div>
+    <div class="card red"><div class="label">Eventos abiertos</div><div class="value">${abiertos}</div><div class="sub">sist. eléctrico</div></div>
+    <div class="card green"><div class="label">Arranques TG</div><div class="value">${arranques}</div><div class="sub">total histórico</div></div>
+    <div class="card amber"><div class="label">Paros TG</div><div class="value">${paros}</div><div class="sub">total histórico</div></div>
+  `;
+
+  renderMachineStats();
+}
+
+function renderCatChart() {
+  const counter = {};
+  const colors  = { 'Generación':'#2E75B6','Sistema Eléctrico':'#C0392B','Maniobra':'#27AE60' };
+  allData.forEach(r => {
+    const k = r['Categoría'] || 'Otro';
+    counter[k] = (counter[k]||0) + 1;
+  });
+  const total = allData.length || 1;
+  const sorted = Object.entries(counter).sort((a,b) => b[1]-a[1]);
+  const html = sorted.map(([cat, cnt]) => `
+    <div style="margin-bottom:8px">
+      <div style="display:flex;justify-content:space-between;margin-bottom:3px;font-size:12px">
+        <span style="color:var(--color-text-primary,#1a2332)">${cat}</span>
+        <span style="font-weight:600;color:${colors[cat]||'#666'}">${cnt}</span>
+      </div>
+      <div class="barra-wrap"><div class="barra" style="width:${Math.round(cnt/total*100)}%;background:${colors[cat]||'#888'}"></div></div>
+    </div>
+  `).join('');
+  document.getElementById('cat-chart').innerHTML = html || '<div class="no-data">Sin datos</div>';
+}
+
+function renderOpenEvents() {
+  const electricos = allData.filter(r => r['Categoría'] === 'Sistema Eléctrico');
+
+  const toISO = r => {
+    const parts = (r['Fecha']||'').split('/');
+    if (parts.length !== 3) return '';
+    return `${parts[2]}-${parts[1].padStart(2,'0')}-${parts[0].padStart(2,'0')}T${(r['Hora Evento']||r['Hora Mensaje']||'00:00').replace('.',':')}`;
+  };
+
+  // Solo últimos 60 días y con equipo identificado
+  const hace60 = new Date(); hace60.setDate(hace60.getDate()-60);
+  const iso60 = hace60.toISOString().substring(0,10);
+
+  const abiertos = electricos.filter(r => {
+    if (!['Apertura','Falla'].includes(r['Acción'])) return false;
+    const eq = (r['Equipos Involucrados']||'').trim();
+    if (!eq) return false; // sin equipo = no se puede cruzar
+    const ts = toISO(r);
+    return ts >= iso60;
+  });
+
+  const cierres = electricos.filter(r =>
+    ['Cierre','Recierre'].includes(r['Acción']) || r['Estado'] === 'Resuelto'
+  );
+
+  const sinResolver = abiertos.filter(ev => {
+    const equipos = (ev['Equipos Involucrados']||'').split(',').map(e=>e.trim()).filter(Boolean);
+    const tsEv = toISO(ev);
+    return !cierres.some(c => {
+      const tsCierre = toISO(c);
+      if (tsCierre <= tsEv) return false;
+      const eqC = (c['Equipos Involucrados']||'').split(',').map(e=>e.trim());
+      return equipos.some(eq => eqC.some(ec => ec===eq || ec.includes(eq) || eq.includes(ec)));
+    });
+  }).slice(0,15);
+
+  if (!sinResolver.length) {
+    document.getElementById('open-events').innerHTML = '<div style="color:#27AE60;text-align:center;padding:20px;font-weight:500">Sin eventos abiertos</div>';
+    return;
+  }
+
+  document.getElementById('open-events').innerHTML =
+    `<table class="mini-table">` +
+    sinResolver.map(r => {
+      const c = COLOR_MAP[r['Acción']] || COLOR_MAP['Evento'];
+      return `<tr>
+        <td><span class="badge" style="background:${c.bg};color:${c.color}">${r['Acción']}</span></td>
+        <td style="font-weight:500">${r['Equipos Involucrados']}</td>
+        <td style="color:#666">${r['Fecha']} ${r['Hora Evento']||''}</td>
+      </tr>`;
+    }).join('') + `</table>`;
+}
+
+function renderMachineStats() {
+  const gen = allData.filter(r => r['Categoría'] === 'Generación');
+
+  // TG ranking por operaciones
+  const tgCount = {}, tgDisp = {};
+  gen.forEach(r => {
+    (r['Equipos Involucrados']||'').split(',').forEach(eq => {
+      eq = eq.trim(); if (!eq) return;
+      tgCount[eq] = (tgCount[eq]||0) + 1;
+      if (r['Acción']==='Disparo') tgDisp[eq] = (tgDisp[eq]||0)+1;
+    });
+  });
+  const topTG = Object.entries(tgCount).sort((a,b)=>b[1]-a[1]).slice(0,8);
+
+  // Último mes: arranques, paros, disparos
+  const hoy = new Date();
+  const hace30 = new Date(); hace30.setDate(hoy.getDate()-30);
+  const iso30 = hace30.toISOString().substring(0,10);
+
+  const toISODate = r => {
+    const p = (r['Fecha']||'').split('/');
+    return p.length===3 ? `${p[2]}-${p[1].padStart(2,'0')}-${p[0].padStart(2,'0')}` : '';
+  };
+
+  const lastMonth = gen.filter(r => toISODate(r) >= iso30);
+  const arr30 = lastMonth.filter(r=>r['Acción']==='Arranque').length;
+  const par30 = lastMonth.filter(r=>r['Acción']==='Paro').length;
+  const dis30 = lastMonth.filter(r=>r['Acción']==='Disparo').length;
+
+  // Últimos 10 TG eventos (arranque + paro + disparo)
+  const lastTG = gen.slice(-10).reverse();
+
+  const topHTML = topTG.length ? topTG.map(([tg, cnt]) => {
+    const max = topTG[0][1]||1;
+    const disp = tgDisp[tg]||0;
+    return `<div style="margin-bottom:8px">
+      <div style="display:flex;justify-content:space-between;margin-bottom:3px;font-size:12px">
+        <span style="font-weight:500">${tg}</span>
+        <span style="color:#666">${cnt} ops${disp>0?` · <b style="color:#C0392B">${disp} disp.</b>`:''}</span>
+      </div>
+      <div class="barra-wrap"><div class="barra" style="width:${Math.round(cnt/max*100)}%;background:#2E75B6"></div></div>
+    </div>`;
+  }).join('') : '<div class="no-data">Sin datos</div>';
+
+  const lastHTML = lastTG.length ? `<table class="mini-table">` +
+    lastTG.map(r => {
+      const c = r['Acción']==='Arranque' ? {bg:'#C6EFCE',color:'#276221'} :
+                r['Acción']==='Disparo'  ? {bg:'#FF9999',color:'#8B0000'} :
+                                           {bg:'#FFEB9C',color:'#7D6608'};
+      return `<tr>
+        <td><span class="badge" style="background:${c.bg};color:${c.color}">${r['Acción']}</span></td>
+        <td style="font-weight:500">${r['Equipos Involucrados']||''}</td>
+        <td style="color:#666;font-size:11px">${r['Fecha']} ${r['Hora Evento']||''}</td>
+        <td style="color:#888;font-size:11px;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${(r['Descripción']||'').substring(0,60)}</td>
+      </tr>`;
+    }).join('') + `</table>` : '<div class="no-data">Sin datos</div>';
+
+  document.getElementById('machine-stats').innerHTML = `
+    <div style="display:flex;gap:10px;margin-bottom:12px;flex-wrap:wrap">
+      <div class="card green" style="flex:1;min-width:120px"><div class="label">Arranques último mes</div><div class="value">${arr30}</div></div>
+      <div class="card amber" style="flex:1;min-width:120px"><div class="label">Paros último mes</div><div class="value">${par30}</div></div>
+      <div class="card red"   style="flex:1;min-width:120px"><div class="label">Disparos último mes</div><div class="value">${dis30}</div></div>
+    </div>
+    <div class="grid2">
+      <div>
+        <div class="section-title">TG — Ranking por operaciones</div>
+        <div style="background:#fff;border-radius:8px;border:1px solid #d0dce8;padding:12px">${topHTML}</div>
+      </div>
+      <div>
+        <div class="section-title">TG — Últimos eventos</div>
+        <div style="background:#fff;border-radius:8px;border:1px solid #d0dce8;padding:12px;overflow-x:auto">${lastHTML}</div>
+      </div>
+    </div>
+  `;
+}
+
+function renderAlertas() {
+  const disparosHoy = allData.filter(r => {
+    const hoy = new Date(); const hoyStr = `${hoy.getDate()}/${hoy.getMonth()+1}/${hoy.getFullYear()}`;
+    return r['Fecha'] === hoyStr && r['Acción'] === 'Disparo';
+  });
+  const container = document.getElementById('alertas');
+  if (disparosHoy.length) {
+    container.innerHTML = `<div class="alerta-banner">
+      ALERTA: ${disparosHoy.length} disparo(s) registrado(s) hoy —
+      ${disparosHoy.map(r => r['Equipos Involucrados'] || r['Subcategoría']).join(', ')}
+    </div>`;
+  } else {
+    container.innerHTML = '';
+  }
+}
+
+function renderTable() {
+  const start = currentPage * PAGE_SIZE;
+  const page  = filtered.slice(start, start + PAGE_SIZE);
+  const tbody = document.getElementById('table-body');
+
+  if (!page.length) {
+    tbody.innerHTML = `<tr><td colspan="9" class="no-data">Sin resultados</td></tr>`;
+  } else {
+    tbody.innerHTML = page.map(r => {
+      const c = COLOR_MAP[r['Acción']] || COLOR_MAP['Evento'];
+      const isDisparo = r['Acción'] === 'Disparo';
+      return `<tr style="background:${c.bg}">
+        <td style="color:${isDisparo?'#8B0000':'inherit'};font-weight:${isDisparo?'600':'400'}">${r['Fecha']||''}</td>
+        <td>${r['Hora Evento']||r['Hora Mensaje']||''}</td>
+        <td style="font-size:11px">${(r['Remitente']||'').substring(0,22)}</td>
+        <td><span style="font-size:11px;color:${c.color}">${r['Categoría']||''}</span></td>
+        <td><span style="font-size:11px">${r['Subcategoría']||''}</span></td>
+        <td><span class="badge" style="background:${c.bg};color:${c.color};border:1px solid ${c.color}40">${r['Acción']||''}</span></td>
+        <td style="font-size:11px;font-weight:500">${r['Equipos Involucrados']||''}</td>
+        <td><select class="status-select" onchange="updateStatus(this,'${r['Fecha']}','${r['Hora Evento']}')">
+          ${['Pendiente','En curso','Resuelto'].map(s =>
+            `<option${r['Estado']===s?' selected':''}>${s}</option>`).join('')}
+        </select></td>
+        <td class="desc-cell" title="${(r['Descripción']||'').replace(/"/g,'&quot;')}">${r['Descripción']||''}</td>
+      </tr>`;
+    }).join('');
+  }
+
+  const total = filtered.length;
+  document.getElementById('pag-info').textContent =
+    `${start+1}–${Math.min(start+PAGE_SIZE, total)} de ${total} eventos`;
+  document.getElementById('btn-prev').disabled = currentPage === 0;
+  document.getElementById('btn-next').disabled = start + PAGE_SIZE >= total;
+}
+
+function changePage(dir) {
+  currentPage += dir;
+  renderTable();
+  window.scrollTo(0, document.querySelector('.table-wrap').offsetTop - 20);
+}
+
+function updateStatus(sel, fecha, hora) {
+  const row = allData.find(r => r['Fecha'] === fecha && r['Hora Evento'] === hora);
+  if (row) {
+    row['Estado'] = sel.value;
+    renderCards();
+    renderOpenEvents();
+    renderAlertas();
+  }
+}
+
+function sortBy(col) {
+  if (sortCol === col) sortAsc = !sortAsc;
+  else { sortCol = col; sortAsc = true; }
+  filtered.sort((a,b) => {
+    const av = a[col]||'', bv = b[col]||'';
+    return sortAsc ? av.localeCompare(bv) : bv.localeCompare(av);
+  });
+  renderTable();
+}
+
+setInterval(loadData, 60000);
+loadData();
+</script>
+</div><!-- /section-novedades -->
+<!-- SECCIÓN MANIOBRAS MDJ -->
+<div id="section-maniobras" style="display:none">
+  <div style="background:#0a0d14;min-height:100vh;padding:16px 20px;color:#e2e8f8;font-family:'Segoe UI',Arial,sans-serif">
+
+    <style>
+    .mdj-kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:9px;margin-bottom:16px}
+    .mdj-kpi{background:#111520;border:1px solid #252d45;border-radius:10px;padding:13px 15px;position:relative;overflow:hidden}
+    .mdj-kpi::after{content:'';position:absolute;bottom:0;left:0;right:0;height:2.5px}
+    .mdj-kpi.k0::after{background:linear-gradient(90deg,#38bdf8,#4ade80)}
+    .mdj-kpi.k1::after{background:linear-gradient(90deg,#6ee7b7,#fb7185)}
+    .mdj-kpi.k2::after{background:linear-gradient(90deg,#a78bfa,#fb923c)}
+    .mdj-kpi.k3::after{background:#f59e0b}
+    .mdj-klbl{font-size:10px;font-weight:700;color:#4a5780;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px}
+    .mdj-kval{font-size:1.7rem;font-weight:800;line-height:1}
+    .mdj-ksub{font-size:10px;color:#7889b0;margin-top:4px}
+    .mdj-tabs{display:flex;gap:3px;margin-bottom:16px;border-bottom:1px solid #252d45}
+    .mdj-tab{padding:8px 15px;font-size:11px;font-weight:700;cursor:pointer;color:#4a5780;border-radius:8px 8px 0 0;border:1px solid transparent;border-bottom:none;transition:all .18s}
+    .mdj-tab:hover{color:#7889b0}
+    .mdj-tab.active{background:#181d2b;border-color:#252d45;color:#e2e8f8;border-bottom:1px solid #181d2b}
+    .mdj-card{background:#111520;border:1px solid #252d45;border-radius:10px;padding:16px;margin-bottom:13px}
+    .mdj-ct{font-size:12px;font-weight:800;color:#e2e8f8;margin-bottom:2px}
+    .mdj-cs{font-size:10px;color:#4a5780;margin-bottom:12px}
+    .mdj-grid2{display:grid;grid-template-columns:1fr 1fr;gap:13px;margin-bottom:13px}
+    .mdj-eq-sum{display:grid;grid-template-columns:repeat(4,1fr);gap:9px;margin-bottom:13px}
+    .mdj-eqs{background:#181d2b;border:1px solid #252d45;border-radius:8px;padding:13px;position:relative;overflow:hidden}
+    .mdj-eqs::before{content:'';position:absolute;top:0;left:0;right:0;height:3px}
+    .mdj-eqs.eq1::before{background:#38bdf8}.mdj-eqs.eq2::before{background:#f472b6}
+    .mdj-eqs.eq3::before{background:#4ade80}.mdj-eqs.eq4::before{background:#fb923c}
+    .mdj-eqname{font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:1px;margin-bottom:9px}
+    .mdj-eqrow{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:3px}
+    .mdj-eqlbl{font-size:10px;color:#4a5780}
+    .mdj-eqval{font-family:monospace;font-size:13px;font-weight:700}
+    .mdj-tog-wrap{display:flex;background:#181d2b;border:1px solid #252d45;border-radius:7px;padding:3px;gap:3px}
+    .mdj-tog{padding:5px 14px;border-radius:5px;font-size:11px;font-weight:700;cursor:pointer;color:#4a5780;transition:all .18s}
+    .mdj-tog.on{background:#2e3a58;color:#e2e8f8}
+    .mdj-sec-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:8px}
+    .mdj-upload-btn{display:inline-flex;align-items:center;gap:6px;padding:7px 14px;border-radius:7px;background:linear-gradient(135deg,#38bdf8,#6366f1);color:#000;font-size:12px;font-weight:700;cursor:pointer;border:none;position:relative;overflow:hidden}
+    .mdj-upload-btn input{position:absolute;inset:0;opacity:0;cursor:pointer;font-size:0}
+    .mdj-h240{height:240px}.mdj-h280{height:280px}
+    @media(max-width:750px){.mdj-grid2{grid-template-columns:1fr}.mdj-kpis,.mdj-eq-sum{grid-template-columns:repeat(2,1fr)}}
+    </style>
+
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:8px">
+      <div style="font-size:16px;font-weight:800;color:#e2e8f8">Maniobras <span style="color:#38bdf8">MDJ</span> — Tablero de Control</div>
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+        <span id="mdj-ts" style="font-size:10px;color:#4a5780;background:#181d2b;padding:4px 9px;border-radius:6px;border:1px solid #252d45">Datos desde Google Sheets</span>
+        <span style="font-size:10px;color:#4ade80;background:#0a2518;padding:4px 9px;border-radius:6px;border:1px solid #4ade8040">TG/CC desde Novedades PAE</span>
+        <label class="mdj-upload-btn" title="Cargar SE y Matrices PaP desde Excel">
+          <input type="file" id="mdj-file" accept=".xlsx,.xls" onchange="mdjLoadXL(event)">
+          + Cargar SE/PaP (Excel)
+        </label>
+      </div>
+    </div>
+
+    <div class="mdj-kpis">
+      <div class="mdj-kpi k0"><div class="mdj-klbl">Maniobras SE</div><div class="mdj-kval" id="mdj-k0">—</div><div class="mdj-ksub">13.2 · 33 · 132 kV</div></div>
+      <div class="mdj-kpi k1"><div class="mdj-klbl">Ops TG / HRSG</div><div class="mdj-kval" id="mdj-k1">—</div><div class="mdj-ksub">arranques + paros</div></div>
+      <div class="mdj-kpi k2"><div class="mdj-klbl">Matrices PaP</div><div class="mdj-kval" id="mdj-k2">—</div><div class="mdj-ksub">realizadas + revisadas</div></div>
+      <div class="mdj-kpi k3"><div class="mdj-klbl">Equipo más activo</div><div class="mdj-kval" id="mdj-k3" style="font-size:1.2rem;padding-top:4px">—</div><div class="mdj-ksub" id="mdj-k3s">total acumulado</div></div>
+    </div>
+
+    <div class="mdj-tabs">
+      <div class="mdj-tab active" onclick="mdjTab('se')">SE · Tensión por Equipo</div>
+      <div class="mdj-tab" onclick="mdjTab('cc')">CS-CC · TG y HRSG</div>
+      <div class="mdj-tab" onclick="mdjTab('mx')">Matrices PaP</div>
+    </div>
+
+    <div id="mdj-se">
+      <div class="mdj-eq-sum" id="mdj-sum-se"></div>
+      <div class="mdj-sec-head">
+        <div style="font-size:12px;font-weight:800;color:#e2e8f8">Maniobras SE por Equipo y Mes</div>
+        <div class="mdj-tog-wrap">
+          <div class="mdj-tog on" id="mdj-tog-se-a" onclick="mdjTogSE('mensual')">Mensual</div>
+          <div class="mdj-tog" id="mdj-tog-se-b" onclick="mdjTogSE('acum')">Acumulado</div>
+        </div>
+      </div>
+      <div class="mdj-grid2">
+        <div class="mdj-card"><div class="mdj-ct">Equipo 1</div><div class="mdj-cs">13.2 / 33 / 132 kV</div><div style="position:relative;height:240px"><canvas id="mdj-se1"></canvas></div></div>
+        <div class="mdj-card"><div class="mdj-ct">Equipo 2</div><div class="mdj-cs">13.2 / 33 / 132 kV</div><div style="position:relative;height:240px"><canvas id="mdj-se2"></canvas></div></div>
+        <div class="mdj-card"><div class="mdj-ct">Equipo 3</div><div class="mdj-cs">13.2 / 33 / 132 kV</div><div style="position:relative;height:240px"><canvas id="mdj-se3"></canvas></div></div>
+        <div class="mdj-card"><div class="mdj-ct">Equipo 4</div><div class="mdj-cs">13.2 / 33 / 132 kV</div><div style="position:relative;height:240px"><canvas id="mdj-se4"></canvas></div></div>
+      </div>
+      <div class="mdj-grid2">
+        <div class="mdj-card"><div class="mdj-ct">Comparativa acumulada</div><div class="mdj-cs">Todos los equipos · todos los niveles</div><div style="position:relative;height:280px"><canvas id="mdj-se-comp"></canvas></div></div>
+        <div class="mdj-card"><div class="mdj-ct">Participación por nivel</div><div class="mdj-cs">Distribución global</div><div style="position:relative;height:280px"><canvas id="mdj-se-donut"></canvas></div></div>
+      </div>
+    </div>
+
+    <div id="mdj-cc" style="display:none">
+      <div class="mdj-eq-sum" id="mdj-sum-cc"></div>
+      <div class="mdj-sec-head">
+        <div style="font-size:12px;font-weight:800;color:#e2e8f8">TG y HRSG por Equipo y Mes</div>
+        <div class="mdj-tog-wrap">
+          <div class="mdj-tog on" id="mdj-tog-cc-a" onclick="mdjTogCC('mensual')">Mensual</div>
+          <div class="mdj-tog" id="mdj-tog-cc-b" onclick="mdjTogCC('acum')">Acumulado</div>
+        </div>
+      </div>
+      <div class="mdj-grid2">
+        <div class="mdj-card"><div class="mdj-ct">Equipo 1</div><div class="mdj-cs">Arranques y Paros · TG / HRSG</div><div style="position:relative;height:240px"><canvas id="mdj-cc1"></canvas></div></div>
+        <div class="mdj-card"><div class="mdj-ct">Equipo 2</div><div class="mdj-cs">Arranques y Paros · TG / HRSG</div><div style="position:relative;height:240px"><canvas id="mdj-cc2"></canvas></div></div>
+        <div class="mdj-card"><div class="mdj-ct">Equipo 3</div><div class="mdj-cs">Arranques y Paros · TG / HRSG</div><div style="position:relative;height:240px"><canvas id="mdj-cc3"></canvas></div></div>
+        <div class="mdj-card"><div class="mdj-ct">Equipo 4</div><div class="mdj-cs">Arranques y Paros · TG / HRSG</div><div style="position:relative;height:240px"><canvas id="mdj-cc4"></canvas></div></div>
+      </div>
+      <div class="mdj-card"><div class="mdj-ct">Comparativa Arranques vs Paros</div><div class="mdj-cs">Total acumulado · TG + HRSG</div><div style="position:relative;height:280px"><canvas id="mdj-cc-comp"></canvas></div></div>
+    </div>
+
+    <div id="mdj-mx" style="display:none">
+      <div class="mdj-eq-sum" id="mdj-sum-mx"></div>
+      <div class="mdj-sec-head">
+        <div style="font-size:12px;font-weight:800;color:#e2e8f8">Matrices PaP por Equipo y Mes</div>
+        <div class="mdj-tog-wrap">
+          <div class="mdj-tog on" id="mdj-tog-mx-a" onclick="mdjTogMX('mensual')">Mensual</div>
+          <div class="mdj-tog" id="mdj-tog-mx-b" onclick="mdjTogMX('acum')">Acumulado</div>
+        </div>
+      </div>
+      <div class="mdj-grid2">
+        <div class="mdj-card"><div class="mdj-ct">Equipo 1</div><div class="mdj-cs">Realiza · Revisa · Presenta</div><div style="position:relative;height:240px"><canvas id="mdj-mx1"></canvas></div></div>
+        <div class="mdj-card"><div class="mdj-ct">Equipo 2</div><div class="mdj-cs">Realiza · Revisa · Presenta</div><div style="position:relative;height:240px"><canvas id="mdj-mx2"></canvas></div></div>
+        <div class="mdj-card"><div class="mdj-ct">Equipo 3</div><div class="mdj-cs">Realiza · Revisa · Presenta</div><div style="position:relative;height:240px"><canvas id="mdj-mx3"></canvas></div></div>
+        <div class="mdj-card"><div class="mdj-ct">Equipo 4</div><div class="mdj-cs">Realiza · Revisa · Presenta</div><div style="position:relative;height:240px"><canvas id="mdj-mx4"></canvas></div></div>
+      </div>
+      <div class="mdj-card"><div class="mdj-ct">Comparativa Realiza / Revisa / Presenta</div><div class="mdj-cs">Total acumulado</div><div style="position:relative;height:280px"><canvas id="mdj-mx-comp"></canvas></div></div>
+    </div>
+
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script>
+function showSection(s){
+  document.getElementById('section-novedades').style.display = s==='novedades' ? 'block' : 'none';
+  document.getElementById('section-maniobras').style.display = s==='maniobras' ? 'block' : 'none';
+  document.getElementById('btn-nav-nov').style.background = s==='novedades' ? 'rgba(255,255,255,0.25)' : 'rgba(255,255,255,0.08)';
+  document.getElementById('btn-nav-man').style.background = s==='maniobras' ? 'rgba(255,255,255,0.25)' : 'rgba(255,255,255,0.08)';
+  if (s==='maniobras') {
+    mdjBuildAll();
+    // Default to CC tab since it has data from Google Sheets
+    mdjTab('cc');
+  }
+}
+
+const MDJ_MO=['Dic 24','Ene 25','Feb 25','Mar 25','Abr 25','May 25','Jun 25','Jul 25','Ago 25','Sep 25','Oct 25','Nov 25','Dic 25','Ene 26','Feb 26','Mar 26'];
+const MDJ_EQS=['Equipo 1','Equipo 2','Equipo 3','Equipo 4'];
+const MDJ_EQC=['#38bdf8','#f472b6','#4ade80','#fb923c'];
+const MDJ_CH={};
+let mdjModeSE='mensual', mdjModeCC='mensual', mdjModeMX='mensual';
+
+const MDJ_R={
+  se:{'Equipo 1':{'13.2':new Array(16).fill(0),'33':new Array(16).fill(0),'132':new Array(16).fill(0)},
+      'Equipo 2':{'13.2':new Array(16).fill(0),'33':new Array(16).fill(0),'132':new Array(16).fill(0)},
+      'Equipo 3':{'13.2':new Array(16).fill(0),'33':new Array(16).fill(0),'132':new Array(16).fill(0)},
+      'Equipo 4':{'13.2':new Array(16).fill(0),'33':new Array(16).fill(0),'132':new Array(16).fill(0)}},
+  tg:{'Equipo 1':{Arranque:new Array(16).fill(0),Paro:new Array(16).fill(0)},
+      'Equipo 2':{Arranque:new Array(16).fill(0),Paro:new Array(16).fill(0)},
+      'Equipo 3':{Arranque:new Array(16).fill(0),Paro:new Array(16).fill(0)},
+      'Equipo 4':{Arranque:new Array(16).fill(0),Paro:new Array(16).fill(0)}},
+  hrsg:{'Equipo 1':{Arranque:new Array(16).fill(0),Paro:new Array(16).fill(0)},
+        'Equipo 2':{Arranque:new Array(16).fill(0),Paro:new Array(16).fill(0)},
+        'Equipo 3':{Arranque:new Array(16).fill(0),Paro:new Array(16).fill(0)},
+        'Equipo 4':{Arranque:new Array(16).fill(0),Paro:new Array(16).fill(0)}},
+  mx:{'Equipo 1':{Realiza:new Array(16).fill(0),Revisa:new Array(16).fill(0),Presenta:new Array(16).fill(0)},
+      'Equipo 2':{Realiza:new Array(16).fill(0),Revisa:new Array(16).fill(0),Presenta:new Array(16).fill(0)},
+      'Equipo 3':{Realiza:new Array(16).fill(0),Revisa:new Array(16).fill(0),Presenta:new Array(16).fill(0)},
+      'Equipo 4':{Realiza:new Array(16).fill(0),Revisa:new Array(16).fill(0),Presenta:new Array(16).fill(0)}}
+};
+
+const mdjSum2=(a,b)=>a.map((v,i)=>v+(b[i]||0));
+const mdjSumA=arrs=>arrs.length?arrs.reduce(mdjSum2):new Array(16).fill(0);
+const mdjTot=a=>a.reduce((s,v)=>s+v,0);
+const mdjAcum=a=>{let s=0;return a.map(v=>s+=v);};
+const mdjMode=(arr,m)=>m==='acum'?mdjAcum(arr):arr;
+const mdjDC=(id)=>{if(MDJ_CH[id]){MDJ_CH[id].destroy();delete MDJ_CH[id];}};
+
+const MDJ_TT={backgroundColor:'#161d30',borderColor:'#2e3a58',borderWidth:1,titleColor:'#e2e8f8',bodyColor:'#a0aec8',padding:10,cornerRadius:8,titleFont:{size:11,weight:'bold'},bodyFont:{size:10}};
+const mdjBO=(stacked=false)=>({responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},plugins:{legend:{labels:{color:'#e2e8f8',font:{size:10},padding:8}},tooltip:MDJ_TT},scales:{x:{stacked,grid:{color:'#1e243810'},ticks:{color:'#7889b0',font:{size:9},maxRotation:45}},y:{stacked,grid:{color:'#1e2438'},ticks:{color:'#7889b0',font:{size:9}}}}});
+const mdjDO=()=>({responsive:true,maintainAspectRatio:false,cutout:'60%',plugins:{legend:{position:'bottom',labels:{color:'#e2e8f8',padding:10,font:{size:10}}},tooltip:{...MDJ_TT}}});
+
+function mdjTab(t){
+  ['se','cc','mx'].forEach(id=>document.getElementById('mdj-'+id).style.display=id===t?'block':'none');
+  document.querySelectorAll('.mdj-tab').forEach((el,i)=>el.classList.toggle('active',['se','cc','mx'][i]===t));
+  mdjBuildAll();
+}
+
+function mdjTogSE(m){mdjModeSE=m;document.getElementById('mdj-tog-se-a').className='mdj-tog'+(m==='mensual'?' on':'');document.getElementById('mdj-tog-se-b').className='mdj-tog'+(m==='acum'?' on':'');mdjBuildSE();}
+function mdjTogCC(m){mdjModeCC=m;document.getElementById('mdj-tog-cc-a').className='mdj-tog'+(m==='mensual'?' on':'');document.getElementById('mdj-tog-cc-b').className='mdj-tog'+(m==='acum'?' on':'');mdjBuildCC();}
+function mdjTogMX(m){mdjModeMX=m;document.getElementById('mdj-tog-mx-a').className='mdj-tog'+(m==='mensual'?' on':'');document.getElementById('mdj-tog-mx-b').className='mdj-tog'+(m==='acum'?' on':'');mdjBuildMX();}
+
+function mdjBuildAll(){
+  // Reset TG/CC data
+  MDJ_EQS.forEach(eq=>{
+    MDJ_R.tg[eq]={Arranque:new Array(16).fill(0),Paro:new Array(16).fill(0)};
+    MDJ_R.hrsg[eq]={Arranque:new Array(16).fill(0),Paro:new Array(16).fill(0)};
+  });
+
+  const mesesMap={
+    '12/2024':'Dic 24','1/2025':'Ene 25','2/2025':'Feb 25','3/2025':'Mar 25',
+    '4/2025':'Abr 25','5/2025':'May 25','6/2025':'Jun 25','7/2025':'Jul 25',
+    '8/2025':'Ago 25','9/2025':'Sep 25','10/2025':'Oct 25','11/2025':'Nov 25',
+    '12/2025':'Dic 25','1/2026':'Ene 26','2/2026':'Feb 26','3/2026':'Mar 26'
+  };
+
+  // TG number → Equipo (ajustar según tu organización)
+  const tgToEq = tg => {
+    const n = parseInt((tg||'').replace(/\D/g,''));
+    if (!n) return null;
+    if (n<=4)  return 'Equipo 1';
+    if (n<=8)  return 'Equipo 2';
+    if (n<=12) return 'Equipo 3';
+    return 'Equipo 4';
+  };
+
+  const genData = window.allData ? window.allData.filter(r=>r['Categoría']==='Generación') : [];
+
+  genData.forEach(r => {
+    const fecha = r['Fecha']||'';
+    const parts = fecha.split('/');
+    if (parts.length!==3) return;
+    const key = `${parseInt(parts[1])}/${parts[2]}`;
+    const mo  = mesesMap[key];
+    if (!mo) return;
+    const idx = MDJ_MO.indexOf(mo);
+    if (idx<0) return;
+    const eqs = (r['Equipos Involucrados']||'').split(',').map(e=>e.trim()).filter(Boolean);
+    eqs.forEach(eq => {
+      const team = tgToEq(eq);
+      if (!team) return;
+      if (r['Acción']==='Arranque') MDJ_R.tg[team].Arranque[idx]++;
+      else if (r['Acción']==='Paro') MDJ_R.tg[team].Paro[idx]++;
+    });
+  });
+
+  document.getElementById('mdj-ts').textContent = `${genData.length} eventos TG cargados`;
+  mdjBuildKPIs(); mdjBuildSumCards(); mdjBuildSE(); mdjBuildCC(); mdjBuildMX();
+}
+
+function mdjBuildKPIs(){
+  const tSE=MDJ_EQS.reduce((s,e)=>s+mdjTot(MDJ_R.se[e]['13.2'])+mdjTot(MDJ_R.se[e]['33'])+mdjTot(MDJ_R.se[e]['132']),0);
+  const tCC=MDJ_EQS.reduce((s,e)=>s+mdjTot(MDJ_R.tg[e].Arranque)+mdjTot(MDJ_R.tg[e].Paro)+mdjTot(MDJ_R.hrsg[e].Arranque)+mdjTot(MDJ_R.hrsg[e].Paro),0);
+  const tMX=MDJ_EQS.reduce((s,e)=>s+mdjTot(MDJ_R.mx[e].Realiza)+mdjTot(MDJ_R.mx[e].Revisa)+mdjTot(MDJ_R.mx[e].Presenta),0);
+  document.getElementById('mdj-k0').textContent=tSE||'—';
+  document.getElementById('mdj-k1').textContent=tCC||'—';
+  document.getElementById('mdj-k2').textContent=tMX||'—';
+  const tots=MDJ_EQS.map(e=>mdjTot(MDJ_R.se[e]['13.2'])+mdjTot(MDJ_R.se[e]['33'])+mdjTot(MDJ_R.se[e]['132'])+mdjTot(MDJ_R.tg[e].Arranque)+mdjTot(MDJ_R.tg[e].Paro));
+  const mx=Math.max(...tots);
+  document.getElementById('mdj-k3').textContent=mx>0?MDJ_EQS[tots.indexOf(mx)]:'—';
+  document.getElementById('mdj-k3s').textContent=mx>0?mx+' ops':'sin datos';
+}
+
+function mdjBuildSumCards(){
+  const cls=['eq1','eq2','eq3','eq4'];
+  ['se','cc','mx'].forEach(type=>{
+    const el=document.getElementById('mdj-sum-'+type);
+    if(!el)return;
+    el.innerHTML=MDJ_EQS.map((eq,i)=>{
+      let rows='';
+      if(type==='se'){
+        const t13=mdjTot(MDJ_R.se[eq]['13.2']),t33=mdjTot(MDJ_R.se[eq]['33']),t132=mdjTot(MDJ_R.se[eq]['132']);
+        rows=`<div class="mdj-eqrow"><span class="mdj-eqlbl">Total</span><span class="mdj-eqval" style="color:${MDJ_EQC[i]}">${t13+t33+t132}</span></div>
+              <div class="mdj-eqrow"><span class="mdj-eqlbl">13.2 kV</span><span class="mdj-eqval" style="color:#38bdf8">${t13}</span></div>
+              <div class="mdj-eqrow"><span class="mdj-eqlbl">33 kV</span><span class="mdj-eqval" style="color:#4ade80">${t33}</span></div>
+              <div class="mdj-eqrow"><span class="mdj-eqlbl">132 kV</span><span class="mdj-eqval" style="color:#f59e0b">${t132}</span></div>`;
+      } else if(type==='cc'){
+        const ta=mdjTot(MDJ_R.tg[eq].Arranque)+mdjTot(MDJ_R.hrsg[eq].Arranque);
+        const tp=mdjTot(MDJ_R.tg[eq].Paro)+mdjTot(MDJ_R.hrsg[eq].Paro);
+        rows=`<div class="mdj-eqrow"><span class="mdj-eqlbl">Total</span><span class="mdj-eqval" style="color:${MDJ_EQC[i]}">${ta+tp}</span></div>
+              <div class="mdj-eqrow"><span class="mdj-eqlbl">Arranques</span><span class="mdj-eqval" style="color:#6ee7b7">${ta}</span></div>
+              <div class="mdj-eqrow"><span class="mdj-eqlbl">Paros</span><span class="mdj-eqval" style="color:#fb7185">${tp}</span></div>`;
+      } else {
+        const tr=mdjTot(MDJ_R.mx[eq].Realiza),tv=mdjTot(MDJ_R.mx[eq].Revisa),tp=mdjTot(MDJ_R.mx[eq].Presenta);
+        rows=`<div class="mdj-eqrow"><span class="mdj-eqlbl">Total</span><span class="mdj-eqval" style="color:${MDJ_EQC[i]}">${tr+tv+tp}</span></div>
+              <div class="mdj-eqrow"><span class="mdj-eqlbl">Realiza</span><span class="mdj-eqval" style="color:#a78bfa">${tr}</span></div>
+              <div class="mdj-eqrow"><span class="mdj-eqlbl">Revisa</span><span class="mdj-eqval" style="color:#fb923c">${tv}</span></div>`;
+      }
+      return `<div class="mdj-eqs ${cls[i]}"><div class="mdj-eqname" style="color:${MDJ_EQC[i]}">${eq}</div>${rows}</div>`;
+    }).join('');
+  });
+}
+
+function mdjBuildSE(){
+  MDJ_EQS.forEach((eq,i)=>{
+    const id='mdj-se'+(i+1); mdjDC(id);
+    MDJ_CH[id]=new Chart(document.getElementById(id),{type:'bar',data:{labels:MDJ_MO,datasets:[
+      {label:'13.2 kV',data:mdjMode(MDJ_R.se[eq]['13.2'],mdjModeSE),backgroundColor:'#38bdf822',borderColor:'#38bdf8',borderWidth:1.5,borderRadius:3},
+      {label:'33 kV',  data:mdjMode(MDJ_R.se[eq]['33'],mdjModeSE),  backgroundColor:'#4ade8022',borderColor:'#4ade80',borderWidth:1.5,borderRadius:3},
+      {label:'132 kV', data:mdjMode(MDJ_R.se[eq]['132'],mdjModeSE), backgroundColor:'#f59e0b22',borderColor:'#f59e0b',borderWidth:1.5,borderRadius:3},
+    ]},options:mdjBO(true)});
+  });
+  mdjDC('mdj-se-comp');mdjDC('mdj-se-donut');
+  MDJ_CH['mdj-se-comp']=new Chart(document.getElementById('mdj-se-comp'),{type:'bar',data:{labels:MDJ_EQS,datasets:[
+    {label:'13.2 kV',data:MDJ_EQS.map(e=>mdjTot(MDJ_R.se[e]['13.2'])),backgroundColor:'#38bdf844',borderColor:'#38bdf8',borderRadius:5},
+    {label:'33 kV',  data:MDJ_EQS.map(e=>mdjTot(MDJ_R.se[e]['33'])),  backgroundColor:'#4ade8044',borderColor:'#4ade80',borderRadius:5},
+    {label:'132 kV', data:MDJ_EQS.map(e=>mdjTot(MDJ_R.se[e]['132'])), backgroundColor:'#f59e0b44',borderColor:'#f59e0b',borderRadius:5},
+  ]},options:mdjBO(true)});
+  const g13=MDJ_EQS.reduce((s,e)=>s+mdjTot(MDJ_R.se[e]['13.2']),0);
+  const g33=MDJ_EQS.reduce((s,e)=>s+mdjTot(MDJ_R.se[e]['33']),0);
+  const g132=MDJ_EQS.reduce((s,e)=>s+mdjTot(MDJ_R.se[e]['132']),0);
+  MDJ_CH['mdj-se-donut']=new Chart(document.getElementById('mdj-se-donut'),{type:'doughnut',data:{labels:['13.2 kV','33 kV','132 kV'],datasets:[{data:[g13,g33,g132],backgroundColor:['#38bdf8','#4ade80','#f59e0b'],borderWidth:2,borderColor:'#111520',hoverOffset:6}]},options:mdjDO()});
+}
+
+function mdjBuildCC(){
+  MDJ_EQS.forEach((eq,i)=>{
+    const id='mdj-cc'+(i+1); mdjDC(id);
+    const rawA=mdjSumA([MDJ_R.tg[eq].Arranque,MDJ_R.hrsg[eq].Arranque]);
+    const rawP=mdjSumA([MDJ_R.tg[eq].Paro,MDJ_R.hrsg[eq].Paro]);
+    MDJ_CH[id]=new Chart(document.getElementById(id),{type:'bar',data:{labels:MDJ_MO,datasets:[
+      {label:'Arranque',data:mdjMode(rawA,mdjModeCC),backgroundColor:'#6ee7b722',borderColor:'#6ee7b7',borderWidth:1.5,borderRadius:3},
+      {label:'Paro',    data:mdjMode(rawP,mdjModeCC),backgroundColor:'#fb718522',borderColor:'#fb7185',borderWidth:1.5,borderRadius:3},
+    ]},options:mdjBO(false)});
+  });
+  mdjDC('mdj-cc-comp');
+  MDJ_CH['mdj-cc-comp']=new Chart(document.getElementById('mdj-cc-comp'),{type:'bar',data:{labels:MDJ_EQS,datasets:[
+    {label:'Arranques TG',data:MDJ_EQS.map(e=>mdjTot(MDJ_R.tg[e].Arranque)),backgroundColor:'#6ee7b755',borderColor:'#6ee7b7',borderRadius:5},
+    {label:'Paros TG',    data:MDJ_EQS.map(e=>mdjTot(MDJ_R.tg[e].Paro)),    backgroundColor:'#fb718555',borderColor:'#fb7185',borderRadius:5},
+    {label:'HRSG Arr',    data:MDJ_EQS.map(e=>mdjTot(MDJ_R.hrsg[e].Arranque)),backgroundColor:'#86efac44',borderColor:'#86efac',borderRadius:5},
+    {label:'HRSG Paro',   data:MDJ_EQS.map(e=>mdjTot(MDJ_R.hrsg[e].Paro)),   backgroundColor:'#fca5a544',borderColor:'#fca5a5',borderRadius:5},
+  ]},options:mdjBO(true)});
+}
+
+function mdjBuildMX(){
+  MDJ_EQS.forEach((eq,i)=>{
+    const id='mdj-mx'+(i+1); mdjDC(id);
+    MDJ_CH[id]=new Chart(document.getElementById(id),{type:'bar',data:{labels:MDJ_MO,datasets:[
+      {label:'Realiza', data:mdjMode(MDJ_R.mx[eq].Realiza,mdjModeMX), backgroundColor:'#a78bfa22',borderColor:'#a78bfa',borderWidth:1.5,borderRadius:3},
+      {label:'Revisa',  data:mdjMode(MDJ_R.mx[eq].Revisa,mdjModeMX),  backgroundColor:'#fb923c22',borderColor:'#fb923c',borderWidth:1.5,borderRadius:3},
+      {label:'Presenta',data:mdjMode(MDJ_R.mx[eq].Presenta,mdjModeMX),backgroundColor:'#38bdf822',borderColor:'#38bdf8',borderWidth:1.5,borderRadius:3},
+    ]},options:mdjBO(true)});
+  });
+  mdjDC('mdj-mx-comp');
+  MDJ_CH['mdj-mx-comp']=new Chart(document.getElementById('mdj-mx-comp'),{type:'bar',data:{labels:MDJ_EQS,datasets:[
+    {label:'Realiza', data:MDJ_EQS.map(e=>mdjTot(MDJ_R.mx[e].Realiza)), backgroundColor:'#a78bfa55',borderColor:'#a78bfa',borderRadius:5},
+    {label:'Revisa',  data:MDJ_EQS.map(e=>mdjTot(MDJ_R.mx[e].Revisa)),  backgroundColor:'#fb923c55',borderColor:'#fb923c',borderRadius:5},
+    {label:'Presenta',data:MDJ_EQS.map(e=>mdjTot(MDJ_R.mx[e].Presenta)),backgroundColor:'#38bdf855',borderColor:'#38bdf8',borderRadius:5},
+  ]},options:mdjBO(true)});
+}
+
+function mdjLoadXL(e){
+  const f=e.target.files[0]; if(!f)return;
+  const rd=new FileReader();
+  rd.onload=ev=>{
+    try{
+      const wb=XLSX.read(ev.target.result,{type:'binary'});
+      mdjParseWB(wb);
+      document.getElementById('mdj-ts').textContent='Local · '+new Date().toLocaleString('es-AR');
+      mdjBuildAll();
+    }catch(ex){alert('Error al leer el Excel MDJ: '+ex.message);}
+  };
+  rd.readAsBinaryString(f);
+}
+
+function mdjParseWB(wb){
+  const MM={1:'Ene',2:'Feb',3:'Mar',4:'Abr',5:'May',6:'Jun',7:'Jul',8:'Ago',9:'Sep',10:'Oct',11:'Nov',12:'Dic'};
+  const lbl=(y,m)=>MM[m]+' '+String(y).slice(-2);
+  const ix=m=>MDJ_MO.indexOf(m);
+  const EXCL=['seccionador','medicion de secuencia','medición de secuencia','pruebas','señalizacion','desmontaje','montaje','parcial'];
+  MDJ_EQS.forEach(eq=>{
+    MDJ_R.se[eq]={'13.2':new Array(16).fill(0),'33':new Array(16).fill(0),'132':new Array(16).fill(0)};
+    MDJ_R.tg[eq]={Arranque:new Array(16).fill(0),Paro:new Array(16).fill(0)};
+    MDJ_R.hrsg[eq]={Arranque:new Array(16).fill(0),Paro:new Array(16).fill(0)};
+    MDJ_R.mx[eq]={Realiza:new Array(16).fill(0),Revisa:new Array(16).fill(0),Presenta:new Array(16).fill(0)};
+  });
+  if(wb.Sheets['Maniobras Realizadas SE']){
+    XLSX.utils.sheet_to_json(wb.Sheets['Maniobras Realizadas SE'],{defval:''}).forEach(r=>{
+      const fd=r['Fecha']; if(!fd)return;
+      const d=fd instanceof Date?fd:new Date(fd); if(isNaN(d))return;
+      const desc=String(r['Maniobra realizada']||'').toLowerCase();
+      const t=r['Nivel de tension (KV)']||r['Nivel de tensión (KV)'];
+      const eq=String(r['Equipo responsable']||'').trim();
+      const tk=t==13.2?'13.2':t==33?'33':t==132?'132':null;
+      if(!tk||!MDJ_EQS.includes(eq))return;
+      if(EXCL.some(k=>desc.includes(k)))return;
+      const k=lbl(d.getFullYear(),d.getMonth()+1); const i=ix(k); if(i<0)return;
+      MDJ_R.se[eq][tk][i]++;
+    });
+  }
+  if(wb.Sheets['Maniobras CS-CC']){
+    XLSX.utils.sheet_to_json(wb.Sheets['Maniobras CS-CC'],{defval:''}).forEach(r=>{
+      const fd=r['Fecha']; if(!fd)return;
+      const d=fd instanceof Date?fd:new Date(fd); if(isNaN(d))return;
+      const man=String(r['Maniobra realizada']||'').toLowerCase();
+      const disp=String(r['Dispositivo']||'').toUpperCase();
+      const eq=String(r['Equipo Esparta']||'').trim(); if(!MDJ_EQS.includes(eq))return;
+      const k=lbl(d.getFullYear(),d.getMonth()+1); const i=ix(k); if(i<0)return;
+      if(disp.startsWith('TG')){
+        if(man.includes('arranque'))MDJ_R.tg[eq].Arranque[i]++;
+        else if(man.includes('paro'))MDJ_R.tg[eq].Paro[i]++;
+      }
+      if(disp.includes('HRSG')){
+        if(man.includes('arranque')||man.includes('acople'))MDJ_R.hrsg[eq].Arranque[i]++;
+        else if(man.includes('paro'))MDJ_R.hrsg[eq].Paro[i]++;
+      }
+    });
+  }
+  if(wb.Sheets['Maniobras escritas SE']){
+    XLSX.utils.sheet_to_json(wb.Sheets['Maniobras escritas SE'],{defval:''}).forEach(r=>{
+      const fd=r['Fecha']; if(!fd)return;
+      const d=fd instanceof Date?fd:new Date(fd); if(isNaN(d))return;
+      const k=lbl(d.getFullYear(),d.getMonth()+1); const i=ix(k); if(i<0)return;
+      const cl=t=>{const s=String(t).toLowerCase();if(s.includes('realiza'))return 'Realiza';if(s.includes('revisa'))return 'Revisa';if(s.includes('presenta'))return 'Presenta';return null;};
+      [[r['Equipo responsable'],r['Tarea asignada']],[r['Equipo colaborador'],r['Tarea equipo colaborador']]].forEach(([eq,ta])=>{
+        if(!eq||!ta)return;
+        const e=String(eq).trim(); const role=cl(ta);
+        if(MDJ_EQS.includes(e)&&role)MDJ_R.mx[e][role][i]++;
+      });
+    });
+  }
+}
+</script>
+</body>
+</html>
