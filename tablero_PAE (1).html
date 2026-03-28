@@ -1,0 +1,1211 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tablero de Control — Novedades PAE</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'Segoe UI', Arial, sans-serif; background: #f0f4f8; color: #1a2332; font-size: 13px; }
+
+.topbar {
+  background: #1F4E79; color: #fff;
+  padding: 12px 20px;
+  display: flex; align-items: center; justify-content: space-between;
+}
+.topbar h1 { font-size: 16px; font-weight: 600; }
+.topbar .meta { font-size: 11px; opacity: 0.75; margin-top: 2px; }
+.refresh-btn {
+  background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.3);
+  color: #fff; padding: 6px 14px; border-radius: 6px; cursor: pointer;
+  font-size: 12px; font-weight: 500;
+}
+.refresh-btn:hover { background: rgba(255,255,255,0.25); }
+
+.main { padding: 16px 20px; }
+
+.cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; margin-bottom: 16px; }
+.card {
+  background: #fff; border-radius: 8px; padding: 12px 14px;
+  border-left: 3px solid #ccc;
+}
+.card .label { font-size: 11px; color: #666; margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.5px; }
+.card .value { font-size: 26px; font-weight: 700; line-height: 1; }
+.card .sub   { font-size: 11px; color: #888; margin-top: 4px; }
+.card.blue  { border-left-color: #2E75B6; } .card.blue  .value { color: #1F4E79; }
+.card.green { border-left-color: #27AE60; } .card.green .value { color: #1E5631; }
+.card.amber { border-left-color: #E67E22; } .card.amber .value { color: #7D5A00; }
+.card.red   { border-left-color: #C0392B; } .card.red   .value { color: #8B0000; }
+.card.gray  { border-left-color: #7f8c8d; } .card.gray  .value { color: #444; }
+
+.section-title {
+  font-size: 12px; font-weight: 600; color: #2E75B6;
+  text-transform: uppercase; letter-spacing: 0.8px;
+  margin: 16px 0 8px; padding-bottom: 4px;
+  border-bottom: 1px solid #c5d8ec;
+}
+
+.filters {
+  display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 10px;
+}
+.filters select, .filters input {
+  border: 1px solid #d0dce8; border-radius: 5px;
+  padding: 5px 10px; font-size: 12px; background: #fff; color: #1a2332;
+  outline: none;
+}
+.filters select:focus, .filters input:focus { border-color: #2E75B6; }
+
+.table-wrap { overflow-x: auto; border-radius: 8px; border: 1px solid #d0dce8; }
+table { width: 100%; border-collapse: collapse; font-size: 12px; min-width: 700px; }
+thead tr { background: #1F4E79; color: #fff; }
+thead th { padding: 9px 10px; text-align: left; font-weight: 600; white-space: nowrap; }
+tbody tr { border-bottom: 1px solid #e8edf2; }
+tbody tr:hover { filter: brightness(0.97); }
+tbody td { padding: 7px 10px; vertical-align: top; }
+.desc-cell { max-width: 320px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+.badge {
+  display: inline-block; padding: 2px 7px; border-radius: 10px;
+  font-size: 10px; font-weight: 600; white-space: nowrap;
+}
+
+.status-select {
+  border: 1px solid #d0dce8; border-radius: 4px;
+  padding: 2px 6px; font-size: 11px; background: #fff; cursor: pointer;
+}
+
+.pagination {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-top: 10px; font-size: 12px; color: #666;
+}
+.pagination button {
+  border: 1px solid #d0dce8; background: #fff; border-radius: 5px;
+  padding: 4px 12px; cursor: pointer; font-size: 12px;
+}
+.pagination button:hover { background: #f0f4f8; }
+.pagination button:disabled { opacity: 0.4; cursor: default; }
+
+.alerta-banner {
+  background: #FDEDEC; border: 1px solid #F7C1C1; border-radius: 6px;
+  padding: 8px 12px; margin-bottom: 10px; font-size: 12px;
+  color: #7B241C; font-weight: 500;
+}
+
+.spinner {
+  text-align: center; padding: 40px; color: #666; font-size: 14px;
+}
+
+.no-data { text-align: center; padding: 30px; color: #999; }
+
+.grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 16px; }
+@media (max-width: 600px) { .grid2 { grid-template-columns: 1fr; } }
+
+.mini-table { width: 100%; font-size: 12px; border-collapse: collapse; }
+.mini-table td { padding: 5px 8px; border-bottom: 1px solid #eee; }
+.mini-table tr:last-child td { border-bottom: none; }
+.mini-table .num { font-weight: 600; text-align: right; }
+
+.barra-wrap { background: #f0f4f8; border-radius: 4px; height: 8px; overflow: hidden; }
+.barra { height: 8px; border-radius: 4px; }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div>
+    <div class="h1">Tablero de Control — Novedades Operativas PAE</div>
+    <div class="meta" id="last-update">Cargando datos...</div>
+  </div>
+    <div style="display:flex;gap:8px;align-items:center">
+    <button class="refresh-btn" onclick="showSection('novedades')" id="btn-nav-nov" style="background:rgba(255,255,255,0.25)">Novedades</button>
+    <button class="refresh-btn" onclick="showSection('maniobras')" id="btn-nav-man">Maniobras MDJ</button>
+    <button class="refresh-btn" onclick="loadData()">Actualizar</button>
+    <button class="refresh-btn" onclick="showAppsScriptConfig()" title="Configurar sincronización con Google Sheets" style="background:rgba(255,255,255,0.1);font-size:14px;padding:6px 10px">⚙</button>
+  </div>
+</div>
+
+<div id="section-novedades">
+<div class="main">
+  <div id="loading" class="spinner">Conectando con Google Sheets...</div>
+  <div id="content" style="display:none">
+
+    <div id="alertas"></div>
+
+    <div class="cards" id="cards"></div>
+
+    <div id="machine-stats"></div>
+
+    <div class="section-title">Registro de novedades</div>
+    <div class="filters">
+      <input type="text"    id="f-buscar"     placeholder="Buscar..." style="width:160px" oninput="applyFilters()">
+      <select id="f-cat"    onchange="applyFilters()"><option value="">Todas las categorías</option></select>
+      <select id="f-sub"    onchange="applyFilters()"><option value="">Todas las subcategorías</option></select>
+      <select id="f-accion" onchange="applyFilters()"><option value="">Todas las acciones</option></select>
+      <select id="f-estado" onchange="applyFilters()">
+        <option value="">Todos los estados</option>
+        <option value="Pendiente">Pendiente</option>
+        <option value="Resuelto">Resuelto</option>
+        <option value="En curso">En curso</option>
+      </select>
+      <input type="date" id="f-desde" onchange="applyFilters()" style="width:130px">
+      <input type="date" id="f-hasta" onchange="applyFilters()" style="width:130px">
+    </div>
+
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th style="width:80px" onclick="sortBy('Fecha')" style="cursor:pointer">Fecha</th>
+            <th style="width:60px">Hora</th>
+            <th style="width:130px">Remitente</th>
+            <th style="width:100px">Categoría</th>
+            <th style="width:110px">Subcategoría</th>
+            <th style="width:80px">Acción</th>
+            <th style="width:140px">Equipos</th>
+            <th style="width:80px">Estado</th>
+            <th>Descripción</th>
+          </tr>
+        </thead>
+        <tbody id="table-body"></tbody>
+      </table>
+    </div>
+    <div class="pagination">
+      <span id="pag-info"></span>
+      <div style="display:flex;gap:6px">
+        <button id="btn-prev" onclick="changePage(-1)">Anterior</button>
+        <button id="btn-next" onclick="changePage(1)">Siguiente</button>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+const SHEET_ID = '180-bBQBJrOZMTfVQZD-tDyjHqEfPrB_yGHFiIRrQiNo';
+const SHEET_NAME = 'Novedades Operativas';
+const PAGE_SIZE = 50;
+
+var allData = [];
+let filtered = [];
+let currentPage = 0;
+let sortCol = 'Fecha';
+let sortAsc = false;
+
+const COLOR_MAP = {
+  'Arranque':  { bg:'#C6EFCE', color:'#276221' },
+  'Paro':      { bg:'#FFEB9C', color:'#7D6608' },
+  'Disparo':   { bg:'#FF9999', color:'#8B0000' },
+  'Recierre':  { bg:'#FCE4D6', color:'#843C0C' },
+  'Apertura':  { bg:'#F4CCCC', color:'#660000' },
+  'Cierre':    { bg:'#D9EAD3', color:'#1E4620' },
+  'Falla':     { bg:'#EA9999', color:'#660000' },
+  'Maniobra':  { bg:'#CFE2F3', color:'#1F4E79' },
+  'Evento':    { bg:'#F2F2F2', color:'#444444' },
+};
+
+async function loadData() {
+  document.getElementById('loading').style.display = 'block';
+  document.getElementById('content').style.display = 'none';
+
+  const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(SHEET_NAME)}`;
+
+  try {
+    const resp = await fetch(url);
+    if (!resp.ok) throw new Error('No se pudo conectar');
+    const text = await resp.text();
+    allData = parseCSV(text);
+    applyPendingStates();
+    buildRowNumCache();
+    applyFilters();
+    buildFilters();
+    renderCards();
+    renderOpenEvents();
+    renderAlertas();
+    document.getElementById('last-update').textContent =
+      'Última actualización: ' + new Date().toLocaleTimeString('es-AR');
+    document.getElementById('loading').style.display = 'none';
+    document.getElementById('content').style.display = 'block';
+  } catch(e) {
+    document.getElementById('loading').innerHTML =
+      `<div style="color:#C0392B;padding:20px">
+        <strong>No se pudo cargar la planilla.</strong><br>
+        Asegurate de que la planilla sea pública:<br>
+        Google Sheets → Compartir → "Cualquier persona con el enlace puede ver"<br><br>
+        <small style="color:#888">${e.message}</small>
+      </div>`;
+  }
+}
+
+function parseCSV(text) {
+  const lines = text.split('\n').filter(l => l.trim());
+  if (lines.length < 2) return [];
+  const headers = parseCSVLine(lines[0]);
+  const rows = [];
+  for (let i = 1; i < lines.length; i++) {
+    const vals = parseCSVLine(lines[i]);
+    if (!vals[0]) continue;
+    const obj = {};
+    headers.forEach((h, idx) => { obj[h.replace(/"/g,'')] = (vals[idx]||'').replace(/"/g,'').trim(); });
+    rows.push(obj);
+  }
+  return rows;
+}
+
+function parseCSVLine(line) {
+  const result = []; let cur = ''; let inQ = false;
+  for (let i = 0; i < line.length; i++) {
+    const c = line[i];
+    if (c === '"') { inQ = !inQ; }
+    else if (c === ',' && !inQ) { result.push(cur); cur = ''; }
+    else { cur += c; }
+  }
+  result.push(cur);
+  return result;
+}
+
+function applyFilters() {
+  const buscar = document.getElementById('f-buscar').value.toLowerCase();
+  const cat    = document.getElementById('f-cat').value;
+  const sub    = document.getElementById('f-sub').value;
+  const accion = document.getElementById('f-accion').value;
+  const estado = document.getElementById('f-estado').value;
+  const desde  = document.getElementById('f-desde').value;
+  const hasta  = document.getElementById('f-hasta').value;
+
+  filtered = allData.filter(r => {
+    if (cat    && r['Categoría']    !== cat)    return false;
+    if (sub    && r['Subcategoría'] !== sub)    return false;
+    if (accion && r['Acción']       !== accion) return false;
+    if (estado && r['Estado']       !== estado) return false;
+    if (buscar && !JSON.stringify(r).toLowerCase().includes(buscar)) return false;
+    if (desde || hasta) {
+      const parts = (r['Fecha']||'').split('/');
+      if (parts.length === 3) {
+        const d = `${parts[2]}-${parts[1].padStart(2,'0')}-${parts[0].padStart(2,'0')}`;
+        if (desde && d < desde) return false;
+        if (hasta && d > hasta) return false;
+      }
+    }
+    return true;
+  });
+
+  currentPage = 0;
+  // Ordenar por defecto: más reciente primero
+  filtered.sort((a, b) => {
+    const toISO = r => {
+      const p = (r['Fecha']||'').split('/');
+      return p.length===3 ? `${p[2]}-${p[1].padStart(2,'0')}-${p[0].padStart(2,'0')}T${(r['Hora Evento']||r['Hora Mensaje']||'00:00')}` : '';
+    };
+    return toISO(b).localeCompare(toISO(a));
+  });
+  renderTable();
+}
+
+function buildFilters() {
+  const cats    = [...new Set(allData.map(r => r['Categoría']).filter(Boolean))].sort();
+  const subs    = [...new Set(allData.map(r => r['Subcategoría']).filter(Boolean))].sort();
+  const accions = [...new Set(allData.map(r => r['Acción']).filter(Boolean))].sort();
+
+  const populate = (id, vals) => {
+    const sel = document.getElementById(id);
+    const first = sel.options[0];
+    sel.innerHTML = '';
+    sel.appendChild(first);
+    vals.forEach(v => { const o = document.createElement('option'); o.value = o.textContent = v; sel.appendChild(o); });
+  };
+  populate('f-cat', cats);
+  populate('f-sub', subs);
+  populate('f-accion', accions);
+}
+
+function renderCards() {
+  const total    = allData.length;
+  const hoy      = new Date(); const hoyStr = `${hoy.getDate()}/${hoy.getMonth()+1}/${hoy.getFullYear()}`;
+  const hoyCount = allData.filter(r => r['Fecha'] === hoyStr).length;
+  const pending  = allData.filter(r => r['Estado'] === 'Pendiente' && r['Categoría'] === 'Sistema Eléctrico').length;
+
+  // Disparos reales: solo Acción=Disparo, subcategoría TG, excluyendo "entra en servicio por disparo"
+  const esDisparoReal = r => {
+    if (r['Acción'] !== 'Disparo') return false;
+    const desc = (r['Descripción']||'').toLowerCase();
+    // Excluir si la descripción indica que ENTRA en servicio como consecuencia del disparo de otra
+    if (/entra.*por disparo|ingresa.*por disparo|en servicio.*por disparo|por reserva.*disparo/.test(desc)) return false;
+    return true;
+  };
+  const disparos = allData.filter(esDisparoReal).length;
+  const abiertos = allData.filter(r =>
+    ['Apertura','Falla'].includes(r['Acción']) &&
+    r['Categoría'] === 'Sistema Eléctrico' &&
+    r['Estado'] !== 'Resuelto'
+  ).length;
+
+  document.getElementById('cards').innerHTML = `
+    <div class="card blue" style="cursor:pointer" onclick="showModal('total')">
+      <div class="label">Total histórico</div><div class="value">${total}</div><div class="sub" style="color:#2E75B6">Ver todo →</div>
+    </div>
+    <div class="card green" style="cursor:pointer" onclick="showModal('hoy')">
+      <div class="label">Hoy</div><div class="value">${hoyCount}</div><div class="sub" style="color:#27AE60">${hoyStr} →</div>
+    </div>
+    <div class="card amber" style="cursor:pointer" onclick="showModal('pendientes')">
+      <div class="label">Pendientes</div><div class="value">${pending}</div><div class="sub" style="color:#E67E22">Sist. eléctrico →</div>
+    </div>
+  `;
+
+  renderMachineStats(esDisparoReal);
+}
+
+// ── MODAL INTERACTIVO ──────────────────────────────────────────────────────
+function showModal(tipo) {
+  let titulo = '', rows = [];
+  const cols = ['Fecha','Hora Evento','Categoría','Subcategoría','Acción','Equipos Involucrados','Estado','Descripción'];
+
+  const hoy = new Date(); const hoyStr = `${hoy.getDate()}/${hoy.getMonth()+1}/${hoy.getFullYear()}`;
+
+  if (tipo === 'total')      { titulo = `Todos los eventos (${allData.length})`; rows = [...allData].reverse(); }
+  else if (tipo === 'hoy')   { titulo = `Eventos de hoy — ${hoyStr}`; rows = allData.filter(r=>r['Fecha']===hoyStr); }
+  else if (tipo === 'pendientes') { titulo = 'Eventos pendientes'; rows = allData.filter(r=>r['Estado']==='Pendiente'); }
+  else if (tipo === 'disparos') {
+    const esDisparoReal = r => {
+      if (r['Acción'] !== 'Disparo') return false;
+      const desc = (r['Descripción']||'').toLowerCase();
+      if (/entra.*por disparo|ingresa.*por disparo|en servicio.*por disparo|por reserva.*disparo/.test(desc)) return false;
+      return true;
+    };
+    titulo = 'Disparos TG — Histórico completo';
+    rows = allData.filter(esDisparoReal);
+  }
+  else if (tipo === 'abiertos' || tipo === 'abiertos-elect') {
+    titulo = 'Eventos eléctricos abiertos';
+    rows = getOpenEvents();
+  }
+
+  const COLORS = {
+    'Arranque':{bg:'#C6EFCE',color:'#276221'},'Paro':{bg:'#FFEB9C',color:'#7D6608'},
+    'Disparo':{bg:'#FF9999',color:'#8B0000'},'Apertura':{bg:'#F4CCCC',color:'#660000'},
+    'Cierre':{bg:'#D9EAD3',color:'#1E4620'},'Recierre':{bg:'#FCE4D6',color:'#843C0C'},
+    'Falla':{bg:'#EA9999',color:'#660000'},'Evento':{bg:'#F2F2F2',color:'#444'},
+    'Maniobra':{bg:'#CFE2F3',color:'#1F4E79'}
+  };
+
+  const tbl = rows.length ? `<table style="width:100%;border-collapse:collapse;font-size:12px">
+    <thead><tr style="background:#1F4E79;color:#fff;position:sticky;top:0">
+      ${cols.map(c=>`<th style="padding:7px 10px;text-align:left;white-space:nowrap">${c}</th>`).join('')}
+    </tr></thead>
+    <tbody>${rows.map(r=>{
+      const c = COLORS[r['Acción']]||COLORS['Evento'];
+      return `<tr style="background:${c.bg};border-bottom:1px solid #ddd">
+        <td style="padding:5px 8px;white-space:nowrap">${r['Fecha']||''}</td>
+        <td style="padding:5px 8px;white-space:nowrap">${r['Hora Evento']||''}</td>
+        <td style="padding:5px 8px;font-size:11px">${r['Categoría']||''}</td>
+        <td style="padding:5px 8px;font-size:11px">${r['Subcategoría']||''}</td>
+        <td style="padding:5px 8px"><span style="background:${c.bg};color:${c.color};border:1px solid ${c.color}40;padding:1px 7px;border-radius:10px;font-size:10px;font-weight:600">${r['Acción']||''}</span></td>
+        <td style="padding:5px 8px;font-weight:500">${r['Equipos Involucrados']||''}</td>
+        <td style="padding:5px 8px;font-size:11px">${r['Estado']||''}</td>
+        <td style="padding:5px 8px;font-size:11px;max-width:300px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${(r['Descripción']||'').replace(/"/g,'&quot;')}">${r['Descripción']||''}</td>
+      </tr>`;
+    }).join('')}</tbody>
+  </table>` : '<div style="padding:20px;color:#999;text-align:center">Sin resultados</div>';
+
+  let modal = document.getElementById('modal-interactivo');
+  if (!modal) {
+    modal = document.createElement('div');
+    modal.id = 'modal-interactivo';
+    modal.style.cssText = 'display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:2000;align-items:flex-start;justify-content:center;padding-top:40px;overflow-y:auto';
+    modal.onclick = e => { if (e.target===modal) modal.style.display='none'; };
+    document.body.appendChild(modal);
+  }
+  modal.innerHTML = `
+    <div style="background:#fff;border-radius:10px;padding:20px;max-width:1100px;width:96vw;max-height:85vh;overflow-y:auto">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;border-bottom:1px solid #e0e0e0;padding-bottom:10px">
+        <div style="font-size:15px;font-weight:700;color:#1F4E79">${titulo} — ${rows.length} registros</div>
+        <button onclick="document.getElementById('modal-interactivo').style.display='none'" style="border:none;background:#f0f4f8;border-radius:6px;padding:6px 14px;cursor:pointer;font-size:13px;font-weight:600">✕ Cerrar</button>
+      </div>
+      <div style="overflow-x:auto">${tbl}</div>
+    </div>`;
+  modal.style.display = 'flex';
+}
+
+function getOpenEvents() {
+  const electricos = allData.filter(r => r['Categoría'] === 'Sistema Eléctrico');
+  const toISO = r => {
+    const parts = (r['Fecha']||'').split('/');
+    if (parts.length !== 3) return '';
+    return `${parts[2]}-${parts[1].padStart(2,'0')}-${parts[0].padStart(2,'0')}T${(r['Hora Evento']||r['Hora Mensaje']||'00:00').replace('.',':')}`;
+  };
+  const hace60 = new Date(); hace60.setDate(hace60.getDate()-60);
+  const iso60 = hace60.toISOString().substring(0,10);
+  const abiertos = electricos.filter(r => {
+    if (!['Apertura','Falla'].includes(r['Acción'])) return false;
+    const eq = (r['Equipos Involucrados']||'').trim();
+    if (!eq) return false;
+    return toISO(r) >= iso60;
+  });
+  const cierres = electricos.filter(r =>
+    r['Acción']==='Cierre' || r['Acción']==='Recierre' || r['Estado']==='Resuelto' || r['Estado']==='Recierre'
+  );
+  return abiertos.filter(ev => {
+    const equipos = (ev['Equipos Involucrados']||'').split(',').map(e=>e.trim()).filter(Boolean);
+    const tsEv = toISO(ev);
+    return !cierres.some(c => {
+      const tsCierre = toISO(c);
+      if (tsCierre <= tsEv) return false;
+      const eqC = (c['Equipos Involucrados']||'').split(',').map(e=>e.trim());
+      const desc = (c['Descripción']||'').toLowerCase();
+      return equipos.some(eq => eqC.some(ec=>ec===eq||ec.includes(eq)||eq.includes(ec)) || desc.includes(eq.toLowerCase()));
+    });
+  }).slice(0,15);
+}
+
+function renderOpenEvents() {
+  // No longer renders to DOM - data is accessed via getOpenEvents()
+  // Called for compatibility but does nothing visible
+}
+
+let msjRankingPeriodo = 'historico'; // 'semana' | 'mes' | 'historico'
+
+function renderMachineStats(esDisparoRealFn) {
+  const gen = allData.filter(r => r['Categoría']==='Generación' && r['Subcategoría']==='TG' && (r['Equipos Involucrados']||'').trim());
+
+  // Disparo real: Acción=Disparo Y la descripción habla del propio disparo, no de que ENTRA por disparo de otra
+  const esDisparoReal = esDisparoRealFn || (r => {
+    if (r['Acción'] !== 'Disparo') return false;
+    const desc = (r['Descripción']||'').toLowerCase();
+    // Excluir: "ingresa/entra en servicio ... debido al/por disparo de TGxx" → es un ARRANQUE
+    if (/(?:ingresa|entra)(?:\s+en\s+servicio)?.*(?:debido\s+al?|por)\s+disparo/.test(desc)) return false;
+    if (/entra.*por disparo|ingresa.*por disparo|en servicio.*por disparo|por reserva.*disparo/.test(desc)) return false;
+    return true;
+  });
+
+  // Arranque real: Acción=Arranque O (Acción=Disparo con patrón "entra por disparo de")
+  const esArranqueReal = r => {
+    if (r['Acción'] === 'Arranque') return true;
+    if (r['Acción'] === 'Disparo') {
+      const desc = (r['Descripción']||'').toLowerCase();
+      if (/(?:ingresa|entra)(?:\s+en\s+servicio)?.*(?:debido\s+al?|por)\s+disparo/.test(desc)) return true;
+    }
+    return false;
+  };
+
+  const toISODate = r => {
+    const p = (r['Fecha']||'').split('/');
+    return p.length===3 ? `${p[2]}-${p[1].padStart(2,'0')}-${p[0].padStart(2,'0')}` : '';
+  };
+
+  const now = new Date();
+  const iso7  = new Date(now); iso7.setDate(now.getDate()-7);   const s7  = iso7.toISOString().substring(0,10);
+  const iso30 = new Date(now); iso30.setDate(now.getDate()-30); const s30 = iso30.toISOString().substring(0,10);
+
+  const filtrarPeriodo = rows => {
+    if (msjRankingPeriodo === 'semana') return rows.filter(r => toISODate(r) >= s7);
+    if (msjRankingPeriodo === 'mes')    return rows.filter(r => toISODate(r) >= s30);
+    return rows;
+  };
+
+  const genFilt = filtrarPeriodo(gen);
+
+  // Ranking arranques separado de disparos
+  const tgArr = {}, tgDisp = {};
+  genFilt.forEach(r => {
+    (r['Equipos Involucrados']||'').split(',').forEach(eq => {
+      eq = eq.trim(); if (!eq) return;
+      if (esArranqueReal(r)) tgArr[eq]  = (tgArr[eq]||0)+1;
+      if (esDisparoReal(r))  tgDisp[eq] = (tgDisp[eq]||0)+1;
+    });
+  });
+
+  const topArr  = Object.entries(tgArr).sort((a,b)=>b[1]-a[1]).slice(0,10);
+  const topDisp = Object.entries(tgDisp).sort((a,b)=>b[1]-a[1]).slice(0,10);
+  const allDisparos = gen.filter(esDisparoReal);
+  const lastTG = gen.filter(r => esArranqueReal(r) || r['Acción']==='Paro' || esDisparoReal(r)).slice(-10).reverse();
+
+  const periodoLabel = msjRankingPeriodo==='semana' ? 'Última semana' : msjRankingPeriodo==='mes' ? 'Último mes' : 'Histórico';
+  const btnStyle = active => `padding:4px 12px;border-radius:5px;font-size:11px;font-weight:600;cursor:pointer;border:1px solid #d0dce8;background:${active?'#1F4E79':'#fff'};color:${active?'#fff':'#555'}`;
+
+  const topArrHTML = topArr.length ? topArr.map(([tg, cnt]) => {
+    const max = topArr[0][1]||1;
+    return `<div style="margin-bottom:8px;cursor:pointer;padding:3px;border-radius:4px" onmouseover="this.style.background='#f5f8ff'" onmouseout="this.style.background=''" onclick="showTGDetail('${tg}')">
+      <div style="display:flex;justify-content:space-between;margin-bottom:3px;font-size:12px">
+        <span style="font-weight:600;color:#1F4E79">${tg}</span>
+        <span style="color:#276221;font-weight:500">${cnt} arranques</span>
+      </div>
+      <div class="barra-wrap"><div class="barra" style="width:${Math.round(cnt/max*100)}%;background:#27AE60"></div></div>
+    </div>`;
+  }).join('') : '<div class="no-data">Sin datos</div>';
+
+  const topDispHTML = topDisp.length ? topDisp.map(([tg, cnt]) => {
+    const max = topDisp[0][1]||1;
+    return `<div style="margin-bottom:8px;cursor:pointer;padding:3px;border-radius:4px" onmouseover="this.style.background='#fff5f5'" onmouseout="this.style.background=''" onclick="showTGDetail('${tg}')">
+      <div style="display:flex;justify-content:space-between;margin-bottom:3px;font-size:12px">
+        <span style="font-weight:600;color:#8B0000">${tg}</span>
+        <span style="color:#C0392B;font-weight:500">${cnt} disparos</span>
+      </div>
+      <div class="barra-wrap"><div class="barra" style="width:${Math.round(cnt/max*100)}%;background:#C0392B"></div></div>
+    </div>`;
+  }).join('') : '<div class="no-data">Sin disparos</div>';
+
+  const lastHTML = lastTG.length ? `<table class="mini-table">` +
+    lastTG.map(r => {
+      const c = esDisparoReal(r)  ? {bg:'#FF9999',color:'#8B0000'} :
+                r['Acción']==='Arranque' || esArranqueReal(r) ? {bg:'#C6EFCE',color:'#276221'} :
+                                           {bg:'#FFEB9C',color:'#7D6608'};
+      const etiq = esDisparoReal(r) ? 'Disparo' : esArranqueReal(r) ? 'Arranque' : r['Acción'];
+      const tg0 = (r['Equipos Involucrados']||'').split(',')[0].trim();
+      return `<tr style="cursor:pointer" onclick="showTGDetail('${tg0}')">
+        <td><span class="badge" style="background:${c.bg};color:${c.color}">${etiq}</span></td>
+        <td style="font-weight:500">${r['Equipos Involucrados']}</td>
+        <td style="color:#666;font-size:11px">${r['Fecha']} ${r['Hora Evento']||''}</td>
+        <td style="color:#888;font-size:11px;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${(r['Descripción']||'').substring(0,60)}</td>
+      </tr>`;
+    }).join('') + `</table>` : '<div class="no-data">Sin datos</div>';
+
+  const disparosHTML = allDisparos.length ? `<table class="mini-table" style="width:100%">
+    <thead><tr style="background:#1F4E79;color:#fff">
+      <th style="padding:6px 8px">Fecha</th><th style="padding:6px 8px">Hora</th>
+      <th style="padding:6px 8px">Equipo</th><th style="padding:6px 8px">Descripción</th>
+    </tr></thead>` +
+    allDisparos.map(r => {
+      const tg0 = (r['Equipos Involucrados']||'').split(',')[0].trim();
+      return `<tr style="background:#FFF5F5;border-bottom:1px solid #FFD0D0;cursor:pointer" onclick="showTGDetail('${tg0}')">
+        <td style="padding:5px 8px;font-weight:600;color:#8B0000">${r['Fecha']}</td>
+        <td style="padding:5px 8px">${r['Hora Evento']||''}</td>
+        <td style="padding:5px 8px;font-weight:600">${r['Equipos Involucrados']||''}</td>
+        <td style="padding:5px 8px;font-size:11px">${(r['Descripción']||'').substring(0,150)}</td>
+      </tr>`;
+    }).join('') + `</table>` : '<div class="no-data">Sin disparos</div>';
+
+  const tgTabActive = window._tgTab || 'arranques';
+
+  document.getElementById('machine-stats').innerHTML = `
+    <div style="display:flex;gap:10px;margin-bottom:12px;flex-wrap:wrap;align-items:center">
+      <div class="card red" style="flex:0 0 160px;padding:10px 14px;cursor:pointer" onclick="document.getElementById('modal-disparos').style.display='flex'">
+        <div class="label">Disparos TG total</div>
+        <div class="value" style="font-size:22px">${allDisparos.length}</div>
+        <div class="sub" style="color:#2E75B6;font-weight:600">Ver todos →</div>
+      </div>
+      <div class="card amber" style="flex:0 0 160px;padding:10px 14px;cursor:pointer" onclick="showModal('abiertos-elect')">
+        <div class="label">Eventos eléctricos abiertos</div>
+        <div class="value" style="font-size:22px">${getOpenEvents().length}</div>
+        <div class="sub" style="color:#E67E22;font-weight:600">Ver abiertos →</div>
+      </div>
+      <div style="display:flex;gap:6px;align-items:center;margin-left:auto">
+        <button style="${btnStyle(msjRankingPeriodo==='semana')}" onclick="msjRankingPeriodo='semana';renderMachineStats()">Última semana</button>
+        <button style="${btnStyle(msjRankingPeriodo==='mes')}"    onclick="msjRankingPeriodo='mes';renderMachineStats()">Último mes</button>
+        <button style="${btnStyle(msjRankingPeriodo==='historico')}" onclick="msjRankingPeriodo='historico';renderMachineStats()">Histórico</button>
+      </div>
+    </div>
+
+    <div style="display:flex;gap:6px;margin-bottom:10px">
+      <button style="padding:6px 16px;border-radius:6px 6px 0 0;font-size:12px;font-weight:600;cursor:pointer;border:1px solid #d0dce8;border-bottom:none;background:${tgTabActive==='arranques'?'#1F4E79':'#f0f4f8'};color:${tgTabActive==='arranques'?'#fff':'#555'}" onclick="window._tgTab='arranques';renderMachineStats()">Ranking arranques</button>
+      <button style="padding:6px 16px;border-radius:6px 6px 0 0;font-size:12px;font-weight:600;cursor:pointer;border:1px solid #d0dce8;border-bottom:none;background:${tgTabActive==='disparos'?'#8B0000':'#f0f4f8'};color:${tgTabActive==='disparos'?'#fff':'#555'}" onclick="window._tgTab='disparos';renderMachineStats()">Ranking disparos</button>
+      <button style="padding:6px 16px;border-radius:6px 6px 0 0;font-size:12px;font-weight:600;cursor:pointer;border:1px solid #d0dce8;border-bottom:none;background:${tgTabActive==='eventos'?'#276221':'#f0f4f8'};color:${tgTabActive==='eventos'?'#fff':'#555'}" onclick="window._tgTab='eventos';renderMachineStats()">Últimos eventos</button>
+    </div>
+
+    <div style="background:#fff;border-radius:0 8px 8px 8px;border:1px solid #d0dce8;padding:14px;min-height:200px">
+      ${tgTabActive==='arranques' ? topArrHTML : tgTabActive==='disparos' ? topDispHTML : lastHTML}
+    </div>
+
+    <div id="modal-disparos" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:1000;align-items:flex-start;justify-content:center;padding-top:40px" onclick="if(event.target===this)this.style.display='none'">
+      <div style="background:#fff;border-radius:10px;padding:20px;max-width:900px;width:95vw;max-height:80vh;overflow-y:auto">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+          <div style="font-size:15px;font-weight:700;color:#8B0000">Disparos TG reales — ${allDisparos.length} registros</div>
+          <button onclick="document.getElementById('modal-disparos').style.display='none'" style="border:none;background:#f0f4f8;border-radius:6px;padding:6px 12px;cursor:pointer;font-size:13px;font-weight:600">✕ Cerrar</button>
+        </div>
+        <div style="overflow-x:auto">${disparosHTML}</div>
+      </div>
+    </div>
+  `;
+}
+function showTGDetail(tg) {
+  if (!tg) return;
+  const rows = allData.filter(r =>
+    r['Categoría']==='Generación' && r['Subcategoría']==='TG' &&
+    (r['Equipos Involucrados']||'').split(',').map(e=>e.trim()).includes(tg)
+  ).reverse();
+  const COLORS = {'Arranque':{bg:'#C6EFCE',color:'#276221'},'Paro':{bg:'#FFEB9C',color:'#7D6608'},'Disparo':{bg:'#FF9999',color:'#8B0000'}};
+  const arr = rows.filter(r=>r['Acción']==='Arranque').length;
+  const par = rows.filter(r=>r['Acción']==='Paro').length;
+  const dis = rows.filter(r=>r['Acción']==='Disparo').length;
+  const tbl = `
+    <div style="display:flex;gap:12px;margin-bottom:14px;flex-wrap:wrap">
+      <div style="background:#C6EFCE;border-radius:7px;padding:10px 18px;text-align:center"><div style="font-size:11px;color:#276221">Arranques</div><div style="font-size:22px;font-weight:700;color:#276221">${arr}</div></div>
+      <div style="background:#FFEB9C;border-radius:7px;padding:10px 18px;text-align:center"><div style="font-size:11px;color:#7D6608">Paros</div><div style="font-size:22px;font-weight:700;color:#7D6608">${par}</div></div>
+      <div style="background:#FF9999;border-radius:7px;padding:10px 18px;text-align:center"><div style="font-size:11px;color:#8B0000">Disparos</div><div style="font-size:22px;font-weight:700;color:#8B0000">${dis}</div></div>
+    </div>
+    <table style="width:100%;border-collapse:collapse;font-size:12px">
+      <thead><tr style="background:#1F4E79;color:#fff;position:sticky;top:0">
+        <th style="padding:7px 10px">Fecha</th><th style="padding:7px 10px">Hora</th><th style="padding:7px 10px">Acción</th><th style="padding:7px 10px">Descripción</th>
+      </tr></thead>
+      <tbody>${rows.map(r=>{const c=COLORS[r['Acción']]||{bg:'#f5f5f5',color:'#444'};return `<tr style="background:${c.bg};border-bottom:1px solid #ddd"><td style="padding:5px 10px;white-space:nowrap">${r['Fecha']}</td><td style="padding:5px 10px;white-space:nowrap">${r['Hora Evento']||''}</td><td style="padding:5px 10px;color:${c.color};font-weight:600">${r['Acción']}</td><td style="padding:5px 10px;font-size:11px">${r['Descripción']||''}</td></tr>`;}).join('')}</tbody>
+    </table>`;
+  let modal = document.getElementById('modal-interactivo');
+  if (!modal) { modal=document.createElement('div'); modal.id='modal-interactivo'; modal.style.cssText='display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:2000;align-items:flex-start;justify-content:center;padding-top:40px;overflow-y:auto'; modal.onclick=e=>{if(e.target===modal)modal.style.display='none';}; document.body.appendChild(modal); }
+  modal.innerHTML = `<div style="background:#fff;border-radius:10px;padding:20px;max-width:900px;width:96vw;max-height:85vh;overflow-y:auto">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;border-bottom:1px solid #e0e0e0;padding-bottom:10px">
+      <div style="font-size:16px;font-weight:700;color:#1F4E79">${tg} — ${rows.length} eventos</div>
+      <button onclick="document.getElementById('modal-interactivo').style.display='none'" style="border:none;background:#f0f4f8;border-radius:6px;padding:6px 14px;cursor:pointer;font-size:13px;font-weight:600">✕ Cerrar</button>
+    </div>${tbl}</div>`;
+  modal.style.display='flex';
+}
+
+
+function renderAlertas() {
+  const disparosHoy = allData.filter(r => {
+    const hoy = new Date(); const hoyStr = `${hoy.getDate()}/${hoy.getMonth()+1}/${hoy.getFullYear()}`;
+    return r['Fecha'] === hoyStr && r['Acción'] === 'Disparo';
+  });
+  const container = document.getElementById('alertas');
+  if (disparosHoy.length) {
+    container.innerHTML = `<div class="alerta-banner">
+      ALERTA: ${disparosHoy.length} disparo(s) registrado(s) hoy —
+      ${disparosHoy.map(r => r['Equipos Involucrados'] || r['Subcategoría']).join(', ')}
+    </div>`;
+  } else {
+    container.innerHTML = '';
+  }
+}
+
+function renderTable() {
+  const start = currentPage * PAGE_SIZE;
+  const page  = filtered.slice(start, start + PAGE_SIZE);
+  const tbody = document.getElementById('table-body');
+
+  if (!page.length) {
+    tbody.innerHTML = `<tr><td colspan="9" class="no-data">Sin resultados</td></tr>`;
+  } else {
+    tbody.innerHTML = page.map(r => {
+      const c = COLOR_MAP[r['Acción']] || COLOR_MAP['Evento'];
+      const isDisparo = r['Acción'] === 'Disparo';
+      return `<tr style="background:${c.bg}">
+        <td style="color:${isDisparo?'#8B0000':'inherit'};font-weight:${isDisparo?'600':'400'}">${r['Fecha']||''}</td>
+        <td>${r['Hora Evento']||r['Hora Mensaje']||''}</td>
+        <td style="font-size:11px">${(r['Remitente']||'').substring(0,22)}</td>
+        <td><span style="font-size:11px;color:${c.color}">${r['Categoría']||''}</span></td>
+        <td><span style="font-size:11px">${r['Subcategoría']||''}</span></td>
+        <td><span class="badge" style="background:${c.bg};color:${c.color};border:1px solid ${c.color}40">${r['Acción']||''}</span></td>
+        <td style="font-size:11px;font-weight:500">${r['Equipos Involucrados']||''}</td>
+        <td>${(() => {
+          const est = r['Estado']||'';
+          const editable = ['Pendiente','En curso','Resuelto'].includes(est) || est==='';
+          if (editable || r['Categoría']==='Sistema Eléctrico') {
+            const opts = ['Pendiente','En curso','Resuelto','Recierre','No corresponde'];
+            return `<select class="status-select" onchange="updateStatus(this,'${r['Fecha']}','${r['Hora Evento']}')">
+              ${opts.map(s=>`<option${est===s?' selected':''}>${s}</option>`).join('')}
+            </select>`;
+          }
+          const colors = {'No corresponde':'#888','Recierre':'#843C0C','Resuelto':'#1E4620','Pendiente':'#7D5A00'};
+          return `<span style="font-size:11px;color:${colors[est]||'#666'}">${est}</span>`;
+        })()}</td>
+        <td class="desc-cell" title="${(r['Descripción']||'').replace(/"/g,'&quot;')}">${r['Descripción']||''}</td>
+      </tr>`;
+    }).join('');
+  }
+
+  const total = filtered.length;
+  document.getElementById('pag-info').textContent =
+    `${start+1}–${Math.min(start+PAGE_SIZE, total)} de ${total} eventos`;
+  document.getElementById('btn-prev').disabled = currentPage === 0;
+  document.getElementById('btn-next').disabled = start + PAGE_SIZE >= total;
+}
+
+function changePage(dir) {
+  currentPage += dir;
+  renderTable();
+  window.scrollTo(0, document.querySelector('.table-wrap').offsetTop - 20);
+}
+
+// Row number cache: maps (fecha+hora) → 1-based row number in sheet (header=row1, data starts row2)
+const rowNumCache = {};
+
+function buildRowNumCache() {
+  allData.forEach((r, i) => {
+    rowNumCache[r['Fecha'] + '|' + (r['Hora Evento']||'')] = i + 2;
+  });
+}
+
+// ── URL del Apps Script Web App ───────────────────────────────────────────────
+// Completar con la URL de tu web app una vez desplegada
+let APPS_SCRIPT_URL = localStorage.getItem('pae_apps_script_url') || '';
+
+function setAppsScriptUrl(url) {
+  APPS_SCRIPT_URL = url.trim();
+  localStorage.setItem('pae_apps_script_url', APPS_SCRIPT_URL);
+  document.getElementById('apps-script-status').textContent = '✓ URL guardada';
+  document.getElementById('apps-script-status').style.color = '#27AE60';
+  setTimeout(() => document.getElementById('apps-script-modal').style.display='none', 1200);
+}
+
+function showAppsScriptConfig() {
+  let modal = document.getElementById('apps-script-modal');
+  if (!modal) {
+    modal = document.createElement('div');
+    modal.id = 'apps-script-modal';
+    modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:3000;display:flex;align-items:center;justify-content:center';
+    modal.innerHTML = `
+      <div style="background:#fff;border-radius:10px;padding:24px;max-width:600px;width:94vw">
+        <div style="font-size:15px;font-weight:700;color:#1F4E79;margin-bottom:8px">Configurar Apps Script</div>
+        <div style="font-size:12px;color:#666;margin-bottom:14px;line-height:1.6">
+          Pegá la URL del Web App de Google Apps Script para que los cambios de estado se escriban directamente en Google Sheets.
+        </div>
+        <input id="apps-script-url-input" type="text" placeholder="https://script.google.com/macros/s/.../exec"
+          value="${APPS_SCRIPT_URL}"
+          style="width:100%;border:1px solid #d0dce8;border-radius:6px;padding:9px 12px;font-size:13px;margin-bottom:10px;box-sizing:border-box">
+        <div style="display:flex;gap:8px;justify-content:flex-end">
+          <button onclick="document.getElementById('apps-script-modal').style.display='none'" style="border:1px solid #d0dce8;background:#f5f5f5;border-radius:6px;padding:7px 16px;cursor:pointer;font-size:12px">Cancelar</button>
+          <button onclick="setAppsScriptUrl(document.getElementById('apps-script-url-input').value)" style="border:none;background:#1F4E79;color:#fff;border-radius:6px;padding:7px 16px;cursor:pointer;font-size:12px;font-weight:600">Guardar</button>
+        </div>
+        <div id="apps-script-status" style="font-size:11px;margin-top:8px;height:16px"></div>
+      </div>`;
+    document.body.appendChild(modal);
+  } else {
+    document.getElementById('apps-script-url-input').value = APPS_SCRIPT_URL;
+    modal.style.display = 'flex';
+  }
+}
+
+async function updateStatus(sel, fecha, hora) {
+  const row = allData.find(r => r['Fecha'] === fecha && r['Hora Evento'] === hora);
+  if (!row) return;
+
+  row['Estado'] = sel.value;
+  renderCards();
+  renderAlertas();
+
+  // Visual: loading
+  sel.style.background = '#FFF9C4';
+  sel.disabled = true;
+
+  // Guardar en localStorage siempre (fallback)
+  const pendingKey = 'pae_pending_states';
+  let pending = {};
+  try { pending = JSON.parse(localStorage.getItem(pendingKey)||'{}'); } catch(e) {}
+  pending[fecha + '|' + hora] = sel.value;
+  try { localStorage.setItem(pendingKey, JSON.stringify(pending)); } catch(e) {}
+
+  if (!APPS_SCRIPT_URL) {
+    // Sin Apps Script configurado
+    sel.disabled = false;
+    sel.style.background = '#FFF3CD';
+    sel.title = 'Guardado localmente. Configurá Apps Script para sincronizar con Sheets.';
+    // Mostrar aviso una vez
+    if (!window._appsScriptWarned) {
+      window._appsScriptWarned = true;
+      const toast = document.createElement('div');
+      toast.style.cssText = 'position:fixed;bottom:20px;right:20px;background:#1F4E79;color:#fff;padding:12px 18px;border-radius:8px;font-size:12px;z-index:5000;max-width:320px;line-height:1.5';
+      toast.innerHTML = `Cambio guardado localmente.<br><a onclick="showAppsScriptConfig()" style="color:#7dd3fc;cursor:pointer;text-decoration:underline">Configurar Apps Script</a> para sincronizar con Sheets.`;
+      document.body.appendChild(toast);
+      setTimeout(() => toast.remove(), 5000);
+    }
+    return;
+  }
+
+  try {
+    const resp = await fetch(APPS_SCRIPT_URL, {
+      method: 'POST',
+      body: JSON.stringify({ fecha, hora, estado: sel.value }),
+      headers: { 'Content-Type': 'text/plain' } // Apps Script requiere text/plain para evitar preflight
+    });
+    const result = await resp.json();
+
+    if (result.ok) {
+      sel.style.background = '#E8F5E9';
+      sel.title = 'Guardado en Google Sheets ✓';
+      // Borrar del pending local
+      delete pending[fecha + '|' + hora];
+      try { localStorage.setItem(pendingKey, JSON.stringify(pending)); } catch(e) {}
+      // Toast éxito
+      showToast('✓ Estado actualizado en Google Sheets', '#27AE60');
+    } else {
+      sel.style.background = '#FFECEC';
+      sel.title = `Error: ${result.error || result.row}`;
+      showToast('⚠ No se encontró la fila en Sheets', '#E67E22');
+    }
+  } catch (err) {
+    sel.style.background = '#FFF3CD';
+    sel.title = 'Error de conexión — guardado localmente';
+    showToast('Sin conexión con Apps Script — guardado local', '#E67E22');
+  }
+
+  sel.disabled = false;
+}
+
+function showToast(msg, color) {
+  const t = document.createElement('div');
+  t.style.cssText = `position:fixed;bottom:20px;right:20px;background:${color};color:#fff;padding:10px 16px;border-radius:8px;font-size:12px;font-weight:600;z-index:5000;box-shadow:0 2px 8px rgba(0,0,0,0.2)`;
+  t.textContent = msg;
+  document.body.appendChild(t);
+  setTimeout(() => t.remove(), 3000);
+}
+
+function applyPendingStates() {
+  let pending = {};
+  try { pending = JSON.parse(localStorage.getItem('pae_pending_states')||'{}'); } catch(e) {}
+  Object.entries(pending).forEach(([key, estado]) => {
+    const [fecha, hora] = key.split('|');
+    const row = allData.find(r => r['Fecha']===fecha && r['Hora Evento']===hora);
+    if (row) row['Estado'] = estado;
+  });
+}
+
+function sortBy(col) {
+  if (sortCol === col) sortAsc = !sortAsc;
+  else { sortCol = col; sortAsc = true; }
+  filtered.sort((a,b) => {
+    const av = a[col]||'', bv = b[col]||'';
+    return sortAsc ? av.localeCompare(bv) : bv.localeCompare(av);
+  });
+  renderTable();
+}
+
+setInterval(loadData, 60000);
+loadData();
+</script>
+</div><!-- /section-novedades -->
+<!-- SECCIÓN MANIOBRAS MDJ -->
+<div id="section-maniobras" style="display:none">
+<style>
+.mdj2{font-family:'Segoe UI',Arial,sans-serif;background:#f0f4f8;min-height:100vh;padding:16px 20px;color:#1a2332}
+.mdj2-header{background:#1F4E79;color:#fff;padding:12px 18px;border-radius:8px;display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:8px}
+.mdj2-kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-bottom:14px}
+.mdj2-kpi{background:#fff;border-radius:8px;padding:12px 14px;border-left:3px solid #2E75B6}
+.mdj2-kpi .lbl{font-size:10px;color:#666;text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px}
+.mdj2-kpi .val{font-size:22px;font-weight:700;color:#1F4E79;line-height:1}
+.mdj2-kpi .sub{font-size:10px;color:#888;margin-top:3px}
+.mdj2-tabs{display:flex;gap:4px;margin-bottom:12px;flex-wrap:wrap}
+.mdj2-tab{padding:7px 16px;border-radius:6px 6px 0 0;font-size:12px;font-weight:600;cursor:pointer;border:1px solid #d0dce8;border-bottom:none;background:#f0f4f8;color:#555;transition:all .15s}
+.mdj2-tab.active{background:#1F4E79;color:#fff;border-color:#1F4E79}
+.mdj2-panel{background:#fff;border-radius:0 8px 8px 8px;border:1px solid #d0dce8;padding:16px;margin-bottom:14px}
+.mdj2-months{display:flex;gap:4px;flex-wrap:wrap;margin-bottom:12px}
+.mdj2-mbtn{padding:4px 10px;border-radius:4px;font-size:11px;font-weight:600;cursor:pointer;border:1px solid #d0dce8;background:#f5f5f5;color:#555;transition:all .15s}
+.mdj2-mbtn.active{background:#1F4E79;color:#fff;border-color:#1F4E79}
+.mdj2-grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.mdj2-card{background:#f8fafc;border:1px solid #e2e8f0;border-radius:7px;padding:12px}
+.mdj2-cttl{font-size:12px;font-weight:700;color:#1F4E79;margin-bottom:8px;border-bottom:1px solid #e2e8f0;padding-bottom:6px}
+.mdj2-bar-row{display:flex;align-items:center;gap:8px;margin-bottom:5px;font-size:12px}
+.mdj2-bar-lbl{width:70px;flex-shrink:0;font-weight:500;color:#333}
+.mdj2-bar-bg{flex:1;background:#e8edf2;border-radius:3px;height:7px;overflow:hidden}
+.mdj2-bar-fill{height:7px;border-radius:3px;transition:width .4s}
+.mdj2-bar-val{width:30px;text-align:right;font-weight:600;color:#1F4E79}
+.mdj2-eq-pills{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px}
+.mdj2-eq-pill{padding:5px 14px;border-radius:20px;font-size:12px;font-weight:600;cursor:pointer;border:2px solid;transition:all .15s}
+.mdj2-tbl{width:100%;border-collapse:collapse;font-size:12px}
+.mdj2-tbl th{background:#1F4E79;color:#fff;padding:7px 10px;text-align:left;font-weight:600}
+.mdj2-tbl td{padding:6px 10px;border-bottom:1px solid #e8edf2}
+.mdj2-tbl tr:hover td{background:#f5f8ff}
+@media(max-width:700px){.mdj2-grid2{grid-template-columns:1fr}}
+</style>
+<div class="mdj2">
+  <div class="mdj2-header">
+    <div>
+      <div style="font-size:15px;font-weight:700">Maniobras MDJ — Novedades por Equipo</div>
+      <div style="font-size:11px;opacity:.75;margin-top:2px">Desde Google Sheets — Novedades PAE</div>
+    </div>
+    <div id="mdj2-ts" style="font-size:11px;opacity:.7">—</div>
+  </div>
+
+  <div class="mdj2-kpis" id="mdj2-kpis"></div>
+
+  <div class="mdj2-eq-pills" id="mdj2-eq-pills"></div>
+
+  <div class="mdj2-months" id="mdj2-months"></div>
+
+  <div class="mdj2-tabs">
+    <div class="mdj2-tab active" onclick="mdj2Tab('resumen')">Resumen general</div>
+    <div class="mdj2-tab" onclick="mdj2Tab('generacion')">Generación TG</div>
+    <div class="mdj2-tab" onclick="mdj2Tab('electrico')">Sistema Eléctrico</div>
+    <div class="mdj2-tab" onclick="mdj2Tab('maniobra')">Maniobras</div>
+    <div class="mdj2-tab" onclick="mdj2Tab('detalle')">Detalle</div>
+  </div>
+
+  <div class="mdj2-panel" id="mdj2-panel">
+    <div style="color:#999;text-align:center;padding:30px">Cargando datos...</div>
+  </div>
+</div>
+</div>
+<script>
+// ── MDJ2 CONFIG ─────────────────────────────────────────────────────────────
+const MDJ2_EQUIPOS = {
+  'Equipo 1': ['Nicolas Irazu','Nicolas Irazu Jefe De Turno'],
+  'Equipo 2': ['Victor Julian Diaz Jefe De Turno','Victor J. Diaz','Victor Diaz'],
+  'Equipo 3': ['Gustavo Malo Jefe De Turno','Gustavo Malo','Gustavo Ivankovic PAE','Gustavo Malo J'],
+  'Equipo 4': ['Carlos Rodriguez Coordinador Turno Team 4','Carlos Rodriguez'],
+  'Relevo':   ['Relevo CCE','Relevo']
+};
+const MDJ2_EQ_COLORS = {
+  'Equipo 1': {bg:'#DBEAFE',border:'#2563EB',text:'#1D4ED8'},
+  'Equipo 2': {bg:'#FCE7F3',border:'#DB2777',text:'#9D174D'},
+  'Equipo 3': {bg:'#D1FAE5',border:'#059669',text:'#065F46'},
+  'Equipo 4': {bg:'#FEF3C7',border:'#D97706',text:'#92400E'},
+  'Relevo':   {bg:'#EDE9FE',border:'#7C3AED',text:'#4C1D95'}
+};
+
+let mdj2ActiveTab = 'resumen';
+let mdj2ActiveEq  = 'Todos';
+let mdj2ActiveMes = null;
+let mdj2Meses     = [];
+
+function getEquipo(remitente) {
+  if (!remitente) return 'Otros';
+  const r = remitente.trim();
+  for (const [eq, names] of Object.entries(MDJ2_EQUIPOS)) {
+    if (names.some(n => r.toLowerCase().includes(n.toLowerCase()) || n.toLowerCase().includes(r.toLowerCase()))) return eq;
+  }
+  return 'Otros';
+}
+
+function showSection(s){
+  document.getElementById('section-novedades').style.display = s==='novedades' ? 'block' : 'none';
+  document.getElementById('section-maniobras').style.display = s==='maniobras' ? 'block' : 'none';
+  document.getElementById('btn-nav-nov').style.background = s==='novedades' ? 'rgba(255,255,255,0.25)' : 'rgba(255,255,255,0.08)';
+  document.getElementById('btn-nav-man').style.background = s==='maniobras' ? 'rgba(255,255,255,0.25)' : 'rgba(255,255,255,0.08)';
+  if (s==='maniobras') mdj2Build();
+}
+
+function mdj2Build() {
+  if (!allData.length) return;
+
+  // Get all months present in data
+  const mesesSet = new Set();
+  allData.forEach(r => {
+    const p = (r['Fecha']||'').split('/');
+    if (p.length===3) mesesSet.add(`${p[1].padStart(2,'0')}/${p[2]}`);
+  });
+  mdj2Meses = [...mesesSet].sort().reverse();
+  if (!mdj2ActiveMes) mdj2ActiveMes = mdj2Meses[0] || null;
+
+  // Filtered data
+  const base = mdj2ActiveEq === 'Todos'
+    ? allData
+    : allData.filter(r => getEquipo(r['Remitente']) === mdj2ActiveEq);
+
+  const filtered = mdj2ActiveMes
+    ? base.filter(r => {
+        const p = (r['Fecha']||'').split('/');
+        return p.length===3 && `${p[1].padStart(2,'0')}/${p[2]}` === mdj2ActiveMes;
+      })
+    : base;
+
+  // Build month buttons
+  const mBtns = ['Todos los meses', ...mdj2Meses].map(m => {
+    const lbl = m === 'Todos los meses' ? m : (() => {
+      const [mm,yy] = m.split('/');
+      const names = ['','Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+      return `${names[parseInt(mm)]} ${yy.slice(-2)}`;
+    })();
+    const active = (m === 'Todos los meses' && !mdj2ActiveMes) || m === mdj2ActiveMes;
+    const val = m === 'Todos los meses' ? 'null' : `'${m}'`;
+    return `<button class="mdj2-mbtn${active?' active':''}" onclick="mdj2ActiveMes=${val};mdj2Build()">${lbl}</button>`;
+  }).join('');
+  document.getElementById('mdj2-months').innerHTML = mBtns;
+
+  // Build equipo pills
+  const allEqs = ['Todos', 'Equipo 1','Equipo 2','Equipo 3','Equipo 4','Relevo','Otros'];
+  document.getElementById('mdj2-eq-pills').innerHTML = allEqs.map(eq => {
+    const c = MDJ2_EQ_COLORS[eq] || {bg:'#f0f4f8',border:'#d0dce8',text:'#555'};
+    const active = eq === mdj2ActiveEq;
+    return `<button class="mdj2-eq-pill" style="background:${active?c.border:c.bg};border-color:${c.border};color:${active?'#fff':c.text}" onclick="mdj2ActiveEq='${eq}';mdj2Build()">${eq}</button>`;
+  }).join('');
+
+  // KPIs
+  const total   = filtered.length;
+  const gen     = filtered.filter(r=>r['Categoría']==='Generación').length;
+  const electr  = filtered.filter(r=>r['Categoría']==='Sistema Eléctrico').length;
+  const manio   = filtered.filter(r=>r['Categoría']==='Maniobra').length;
+  const disp    = filtered.filter(r=>r['Acción']==='Disparo').length;
+  document.getElementById('mdj2-kpis').innerHTML = `
+    <div class="mdj2-kpi"><div class="lbl">Total eventos</div><div class="val">${total}</div><div class="sub">${mdj2ActiveEq}</div></div>
+    <div class="mdj2-kpi" style="border-left-color:#2E75B6"><div class="lbl">Generación TG</div><div class="val" style="color:#2E75B6">${gen}</div><div class="sub">arranques·paros·disparos</div></div>
+    <div class="mdj2-kpi" style="border-left-color:#C0392B"><div class="lbl">Sist. Eléctrico</div><div class="val" style="color:#C0392B">${electr}</div><div class="sub">aperturas·cierres·recierres</div></div>
+    <div class="mdj2-kpi" style="border-left-color:#27AE60"><div class="lbl">Maniobras</div><div class="val" style="color:#27AE60">${manio}</div><div class="sub">traspasos·energizaciones</div></div>
+    <div class="mdj2-kpi" style="border-left-color:#FF6B6B"><div class="lbl">Disparos TG</div><div class="val" style="color:#8B0000">${disp}</div><div class="sub">total período</div></div>`;
+
+  document.getElementById('mdj2-ts').textContent = `${total} eventos · ${mdj2ActiveMes ? (() => {const [mm,yy]=mdj2ActiveMes.split('/');const n=['','Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];return n[parseInt(mm)]+' '+yy;})() : 'Todos los meses'}`;
+
+  // Update tabs active state
+  document.querySelectorAll('.mdj2-tab').forEach((t,i) => {
+    const tabs = ['resumen','generacion','electrico','maniobra','detalle'];
+    t.classList.toggle('active', tabs[i]===mdj2ActiveTab);
+  });
+
+  mdj2RenderTab(filtered, base);
+}
+
+function mdj2Tab(t) {
+  mdj2ActiveTab = t;
+  document.querySelectorAll('.mdj2-tab').forEach((el,i) => {
+    el.classList.toggle('active', ['resumen','generacion','electrico','maniobra','detalle'][i]===t);
+  });
+  const base = mdj2ActiveEq==='Todos' ? allData : allData.filter(r=>getEquipo(r['Remitente'])===mdj2ActiveEq);
+  const filtered = mdj2ActiveMes
+    ? base.filter(r=>{const p=(r['Fecha']||'').split('/');return p.length===3&&`${p[1].padStart(2,'0')}/${p[2]}`===mdj2ActiveMes;})
+    : base;
+  mdj2RenderTab(filtered, base);
+}
+
+function mdj2BarChart(data, color) {
+  if (!data.length) return '<div style="color:#999;padding:10px;font-size:12px">Sin datos</div>';
+  const max = data[0][1]||1;
+  return data.map(([lbl,cnt]) => `
+    <div class="mdj2-bar-row">
+      <div class="mdj2-bar-lbl" title="${lbl}">${lbl.length>10?lbl.substring(0,10)+'…':lbl}</div>
+      <div class="mdj2-bar-bg"><div class="mdj2-bar-fill" style="width:${Math.round(cnt/max*100)}%;background:${color}"></div></div>
+      <div class="mdj2-bar-val">${cnt}</div>
+    </div>`).join('');
+}
+
+function mdj2RenderTab(filtered, base) {
+  const panel = document.getElementById('mdj2-panel');
+
+  if (mdj2ActiveTab === 'resumen') {
+    // By equipo
+    const byEq = {};
+    filtered.forEach(r => {
+      const eq = getEquipo(r['Remitente']);
+      if (!byEq[eq]) byEq[eq]={total:0,gen:0,elec:0,man:0,disp:0};
+      byEq[eq].total++;
+      if(r['Categoría']==='Generación')byEq[eq].gen++;
+      if(r['Categoría']==='Sistema Eléctrico')byEq[eq].elec++;
+      if(r['Categoría']==='Maniobra')byEq[eq].man++;
+      if(r['Acción']==='Disparo')byEq[eq].disp++;
+    });
+
+    // By category/subcategory
+    const bySub = {};
+    filtered.forEach(r => {
+      const k = (r['Subcategoría']||'General');
+      bySub[k]=(bySub[k]||0)+1;
+    });
+    const subData = Object.entries(bySub).sort((a,b)=>b[1]-a[1]).slice(0,8);
+
+    const eqRows = ['Equipo 1','Equipo 2','Equipo 3','Equipo 4','Relevo','Otros']
+      .filter(eq=>byEq[eq])
+      .map(eq => {
+        const c = MDJ2_EQ_COLORS[eq]||{border:'#888',text:'#333'};
+        const d = byEq[eq];
+        return `<tr>
+          <td><span style="font-weight:700;color:${c.text}">${eq}</span></td>
+          <td style="text-align:center;font-weight:600">${d.total}</td>
+          <td style="text-align:center;color:#2E75B6">${d.gen}</td>
+          <td style="text-align:center;color:#C0392B">${d.elec}</td>
+          <td style="text-align:center;color:#27AE60">${d.man}</td>
+          <td style="text-align:center;color:#8B0000;font-weight:${d.disp>0?'700':'400'}">${d.disp||'—'}</td>
+        </tr>`;
+      }).join('');
+
+    panel.innerHTML = `
+      <div class="mdj2-grid2">
+        <div>
+          <div class="mdj2-cttl">Actividad por equipo</div>
+          <table class="mdj2-tbl">
+            <thead><tr><th>Equipo</th><th style="text-align:center">Total</th><th style="text-align:center">Gen</th><th style="text-align:center">Eléct</th><th style="text-align:center">Man</th><th style="text-align:center">Disp</th></tr></thead>
+            <tbody>${eqRows}</tbody>
+          </table>
+        </div>
+        <div>
+          <div class="mdj2-cttl">Por subcategoría</div>
+          ${mdj2BarChart(subData,'#2E75B6')}
+        </div>
+      </div>`;
+
+  } else if (mdj2ActiveTab === 'generacion') {
+    const gen = filtered.filter(r=>r['Categoría']==='Generación');
+    const byAccion = {};
+    const byTG = {};
+    gen.forEach(r => {
+      byAccion[r['Acción']]=(byAccion[r['Acción']]||0)+1;
+      (r['Equipos Involucrados']||'').split(',').forEach(eq=>{
+        eq=eq.trim();if(!eq)return;
+        if(!byTG[eq])byTG[eq]={arr:0,par:0,dis:0};
+        if(r['Acción']==='Arranque')byTG[eq].arr++;
+        else if(r['Acción']==='Paro')byTG[eq].par++;
+        else if(r['Acción']==='Disparo')byTG[eq].dis++;
+      });
+    });
+    const tgRows = Object.entries(byTG)
+      .sort((a,b)=>(b[1].arr+b[1].par+b[1].dis)-(a[1].arr+a[1].par+a[1].dis))
+      .slice(0,12)
+      .map(([tg,d])=>`<tr onclick="showTGDetail('${tg}')" style="cursor:pointer">
+        <td style="font-weight:600;color:#1F4E79">${tg}</td>
+        <td style="text-align:center;color:#27AE60">${d.arr||'—'}</td>
+        <td style="text-align:center;color:#E67E22">${d.par||'—'}</td>
+        <td style="text-align:center;color:#8B0000;font-weight:${d.dis>0?'700':'400'}">${d.dis||'—'}</td>
+        <td style="text-align:center">${d.arr+d.par+d.dis}</td>
+      </tr>`).join('');
+
+    const accionBars = Object.entries(byAccion).sort((a,b)=>b[1]-a[1]);
+    panel.innerHTML = `
+      <div class="mdj2-grid2">
+        <div>
+          <div class="mdj2-cttl">Por máquina (clic = detalle)</div>
+          <table class="mdj2-tbl">
+            <thead><tr><th>TG</th><th style="text-align:center">Arr</th><th style="text-align:center">Par</th><th style="text-align:center">Disp</th><th style="text-align:center">Total</th></tr></thead>
+            <tbody>${tgRows}</tbody>
+          </table>
+        </div>
+        <div>
+          <div class="mdj2-cttl">Por acción</div>
+          ${mdj2BarChart(accionBars,'#2E75B6')}
+        </div>
+      </div>`;
+
+  } else if (mdj2ActiveTab === 'electrico') {
+    const elec = filtered.filter(r=>r['Categoría']==='Sistema Eléctrico');
+    const bySub={}, byAcc={}, byEq={};
+    elec.forEach(r=>{
+      bySub[r['Subcategoría']||'General']=(bySub[r['Subcategoría']||'General']||0)+1;
+      byAcc[r['Acción']||'Evento']=(byAcc[r['Acción']||'Evento']||0)+1;
+      (r['Equipos Involucrados']||'').split(',').forEach(eq=>{eq=eq.trim();if(eq)byEq[eq]=(byEq[eq]||0)+1;});
+    });
+    const subBars = Object.entries(bySub).sort((a,b)=>b[1]-a[1]);
+    const accBars = Object.entries(byAcc).sort((a,b)=>b[1]-a[1]);
+    const eqBars  = Object.entries(byEq).sort((a,b)=>b[1]-a[1]).slice(0,10);
+    panel.innerHTML = `
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px">
+        <div><div class="mdj2-cttl">Por subcategoría</div>${mdj2BarChart(subBars,'#C0392B')}</div>
+        <div><div class="mdj2-cttl">Por acción</div>${mdj2BarChart(accBars,'#E67E22')}</div>
+        <div><div class="mdj2-cttl">Top equipos involucrados</div>${mdj2BarChart(eqBars,'#2E75B6')}</div>
+      </div>`;
+
+  } else if (mdj2ActiveTab === 'maniobra') {
+    const man = filtered.filter(r=>r['Categoría']==='Maniobra');
+    const bySub={}, byEq={};
+    man.forEach(r=>{
+      bySub[r['Subcategoría']||'General']=(bySub[r['Subcategoría']||'General']||0)+1;
+      const eq = getEquipo(r['Remitente']);
+      byEq[eq]=(byEq[eq]||0)+1;
+    });
+    const subBars = Object.entries(bySub).sort((a,b)=>b[1]-a[1]);
+    const eqBars  = Object.entries(byEq).sort((a,b)=>b[1]-a[1]);
+    panel.innerHTML = `
+      <div class="mdj2-grid2">
+        <div><div class="mdj2-cttl">Por subcategoría</div>${mdj2BarChart(subBars,'#27AE60')}</div>
+        <div><div class="mdj2-cttl">Por equipo</div>${mdj2BarChart(eqBars,'#2E75B6')}</div>
+      </div>`;
+
+  } else if (mdj2ActiveTab === 'detalle') {
+    const rows = filtered.slice(-100).reverse();
+    const COLORS={'Arranque':{bg:'#C6EFCE',c:'#276221'},'Paro':{bg:'#FFEB9C',c:'#7D6608'},'Disparo':{bg:'#FF9999',c:'#8B0000'},'Apertura':{bg:'#F4CCCC',c:'#660000'},'Cierre':{bg:'#D9EAD3',c:'#1E4620'},'Recierre':{bg:'#FCE4D6',c:'#843C0C'},'Falla':{bg:'#EA9999',c:'#660000'},'Maniobra':{bg:'#CFE2F3',c:'#1F4E79'},'Evento':{bg:'#F2F2F2',c:'#444'}};
+    const tbl = `<div style="overflow-x:auto"><table class="mdj2-tbl">
+      <thead><tr><th>Fecha</th><th>Hora</th><th>Equipo</th><th>Categoría</th><th>Subcategoría</th><th>Acción</th><th>Equipos</th><th>Descripción</th></tr></thead>
+      <tbody>${rows.map(r=>{
+        const eq=getEquipo(r['Remitente']);
+        const c=MDJ2_EQ_COLORS[eq]||{border:'#888',text:'#555'};
+        const ac=COLORS[r['Acción']]||COLORS['Evento'];
+        return `<tr>
+          <td style="white-space:nowrap">${r['Fecha']||''}</td>
+          <td style="white-space:nowrap">${r['Hora Evento']||''}</td>
+          <td><span style="font-size:10px;font-weight:700;color:${c.text}">${eq}</span></td>
+          <td style="font-size:11px">${r['Categoría']||''}</td>
+          <td style="font-size:11px">${r['Subcategoría']||''}</td>
+          <td><span style="background:${ac.bg};color:${ac.c};padding:1px 6px;border-radius:8px;font-size:10px;font-weight:600">${r['Acción']||''}</span></td>
+          <td style="font-size:11px;font-weight:500">${r['Equipos Involucrados']||''}</td>
+          <td style="font-size:11px;max-width:250px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${(r['Descripción']||'').replace(/"/g,'')}">${(r['Descripción']||'').substring(0,80)}</td>
+        </tr>`;
+      }).join('')}</tbody>
+    </table></div>
+    <div style="font-size:11px;color:#888;margin-top:8px">Mostrando últimos ${rows.length} de ${filtered.length} eventos</div>`;
+    panel.innerHTML = tbl;
+  }
+}
+</script>
+</body>
+</html>
