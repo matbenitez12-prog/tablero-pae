@@ -1,0 +1,1396 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tablero de Control — Novedades PAE</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'Segoe UI', Arial, sans-serif; background: #f0f4f8; color: #1a2332; font-size: 13px; }
+
+.topbar {
+  background: #1F4E79; color: #fff;
+  padding: 12px 20px;
+  display: flex; align-items: center; justify-content: space-between;
+}
+.topbar h1 { font-size: 16px; font-weight: 600; }
+.topbar .meta { font-size: 11px; opacity: 0.75; margin-top: 2px; }
+.refresh-btn {
+  background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.3);
+  color: #fff; padding: 6px 14px; border-radius: 6px; cursor: pointer;
+  font-size: 12px; font-weight: 500;
+}
+.refresh-btn:hover { background: rgba(255,255,255,0.25); }
+
+.main { padding: 16px 20px; }
+
+.cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; margin-bottom: 16px; }
+.card {
+  background: #fff; border-radius: 8px; padding: 12px 14px;
+  border-left: 3px solid #ccc;
+}
+.card .label { font-size: 11px; color: #666; margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.5px; }
+.card .value { font-size: 26px; font-weight: 700; line-height: 1; }
+.card .sub   { font-size: 11px; color: #888; margin-top: 4px; }
+.card.blue  { border-left-color: #2E75B6; } .card.blue  .value { color: #1F4E79; }
+.card.green { border-left-color: #27AE60; } .card.green .value { color: #1E5631; }
+.card.amber { border-left-color: #E67E22; } .card.amber .value { color: #7D5A00; }
+.card.red   { border-left-color: #C0392B; } .card.red   .value { color: #8B0000; }
+.card.gray  { border-left-color: #7f8c8d; } .card.gray  .value { color: #444; }
+
+.section-title {
+  font-size: 12px; font-weight: 600; color: #2E75B6;
+  text-transform: uppercase; letter-spacing: 0.8px;
+  margin: 16px 0 8px; padding-bottom: 4px;
+  border-bottom: 1px solid #c5d8ec;
+}
+
+.filters {
+  display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 10px;
+}
+.filters select, .filters input {
+  border: 1px solid #d0dce8; border-radius: 5px;
+  padding: 5px 10px; font-size: 12px; background: #fff; color: #1a2332;
+  outline: none;
+}
+.filters select:focus, .filters input:focus { border-color: #2E75B6; }
+
+.table-wrap { overflow-x: auto; border-radius: 8px; border: 1px solid #d0dce8; }
+table { width: 100%; border-collapse: collapse; font-size: 12px; min-width: 700px; }
+thead tr { background: #1F4E79; color: #fff; }
+thead th { padding: 9px 10px; text-align: left; font-weight: 600; white-space: nowrap; }
+tbody tr { border-bottom: 1px solid #e8edf2; }
+tbody tr:hover { filter: brightness(0.97); }
+tbody td { padding: 7px 10px; vertical-align: top; }
+.desc-cell { max-width: 320px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+.badge {
+  display: inline-block; padding: 2px 7px; border-radius: 10px;
+  font-size: 10px; font-weight: 600; white-space: nowrap;
+}
+
+.status-select {
+  border: 1px solid #d0dce8; border-radius: 4px;
+  padding: 2px 6px; font-size: 11px; background: #fff; cursor: pointer;
+}
+
+.pagination {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-top: 10px; font-size: 12px; color: #666;
+}
+.pagination button {
+  border: 1px solid #d0dce8; background: #fff; border-radius: 5px;
+  padding: 4px 12px; cursor: pointer; font-size: 12px;
+}
+.pagination button:hover { background: #f0f4f8; }
+.pagination button:disabled { opacity: 0.4; cursor: default; }
+
+.alerta-banner {
+  background: #FDEDEC; border: 1px solid #F7C1C1; border-radius: 6px;
+  padding: 8px 12px; margin-bottom: 10px; font-size: 12px;
+  color: #7B241C; font-weight: 500;
+}
+
+.spinner {
+  text-align: center; padding: 40px; color: #666; font-size: 14px;
+}
+
+.no-data { text-align: center; padding: 30px; color: #999; }
+
+.grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 16px; }
+@media (max-width: 600px) { .grid2 { grid-template-columns: 1fr; } }
+
+.mini-table { width: 100%; font-size: 12px; border-collapse: collapse; }
+.mini-table td { padding: 5px 8px; border-bottom: 1px solid #eee; }
+.mini-table tr:last-child td { border-bottom: none; }
+.mini-table .num { font-weight: 600; text-align: right; }
+
+.barra-wrap { background: #f0f4f8; border-radius: 4px; height: 8px; overflow: hidden; }
+.barra { height: 8px; border-radius: 4px; }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div>
+    <div class="h1">Tablero de Control — Novedades Operativas PAE</div>
+    <div class="meta" id="last-update">Cargando datos...</div>
+  </div>
+    <div style="display:flex;gap:8px;align-items:center">
+    <button class="refresh-btn" onclick="showSection('novedades')" id="btn-nav-nov" style="background:rgba(255,255,255,0.25)">Novedades</button>
+    <button class="refresh-btn" onclick="showSection('maniobras')" id="btn-nav-man">Maniobras MDJ</button>
+    <button class="refresh-btn" onclick="loadData()">Actualizar</button>
+    <button class="refresh-btn" onclick="showAppsScriptConfig()" title="Configurar sincronización con Google Sheets" style="background:rgba(255,255,255,0.1);font-size:14px;padding:6px 10px">⚙</button>
+  </div>
+</div>
+
+<div id="section-novedades">
+<div class="main">
+  <div id="loading" class="spinner">Conectando con Google Sheets...</div>
+  <div id="content" style="display:none">
+
+    <div id="alertas"></div>
+
+    <div class="cards" id="cards"></div>
+
+    <div id="machine-stats"></div>
+
+    <div class="section-title">Registro de novedades</div>
+    <div class="filters">
+      <input type="text"    id="f-buscar"     placeholder="Buscar..." style="width:160px" oninput="applyFilters()">
+      <select id="f-cat"    onchange="applyFilters()"><option value="">Todas las categorías</option></select>
+      <select id="f-sub"    onchange="applyFilters()"><option value="">Todas las subcategorías</option></select>
+      <select id="f-accion" onchange="applyFilters()"><option value="">Todas las acciones</option></select>
+      <select id="f-estado" onchange="applyFilters()">
+        <option value="">Todos los estados</option>
+        <option value="Pendiente">Pendiente</option>
+        <option value="Resuelto">Resuelto</option>
+        <option value="En curso">En curso</option>
+      </select>
+      <input type="date" id="f-desde" onchange="applyFilters()" style="width:130px">
+      <input type="date" id="f-hasta" onchange="applyFilters()" style="width:130px">
+    </div>
+
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th style="width:80px" onclick="sortBy('Fecha')" style="cursor:pointer">Fecha</th>
+            <th style="width:60px">Hora</th>
+            <th style="width:130px">Remitente</th>
+            <th style="width:100px">Categoría</th>
+            <th style="width:110px">Subcategoría</th>
+            <th style="width:80px">Acción</th>
+            <th style="width:140px">Equipos</th>
+            <th style="width:75px">DT m³/d</th>
+            <th style="width:80px">Estado</th>
+            <th>Descripción</th>
+          </tr>
+        </thead>
+        <tbody id="table-body"></tbody>
+      </table>
+    </div>
+    <div class="pagination">
+      <span id="pag-info"></span>
+      <div style="display:flex;gap:6px">
+        <button id="btn-prev" onclick="changePage(-1)">Anterior</button>
+        <button id="btn-next" onclick="changePage(1)">Siguiente</button>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+const SHEET_ID = '180-bBQBJrOZMTfVQZD-tDyjHqEfPrB_yGHFiIRrQiNo';
+
+// ── RED ELÉCTRICA — Base de datos de downtime ─────────────────────────────
+const RED = {"alimentadores":{"ETR CD2 H02":351.42,"ETR CD2 H03":338.71,"ETR CD2 H05":397.9,"ETR CD2 H07":300.59,"ETR CD2 H17":619.58,"ETR CD2 H18":219.99,"ETR CD2 H19":476.76,"ETR CD2 H20":754.23,"ETR OR2 H03":1257.13,"ETR OR2 H04":467.21,"ETR OR2 H11":443.76,"ETR OR2 H12":368.13,"ETR OR2 H13":674.16,"ETR OR2 H15":288.22,"ETR RE2 H19":539.34,"ETR RE2 H21":759.5,"ETR RE2 H23":245.43,"ETR VH2 H02":436.41,"ETR VH2 H09":721.59,"ETR VH2 H11":647.83,"ETR ZR2 H03":279.15,"ETR ZR2 H05":489.61,"ETR ZR2 H07":223.42,"ETR ZR2 H17":662.22,"ETR ZR2 H21":289.03},"sets":{"SET_AGR":288.22,"SET_BAY":226.08,"SET_CD3":397.9,"SET_CDN":351.42,"SET_CG1":619.58,"SET_CG2":300.59,"SET_CG3":338.71,"SET_CT2":219.99,"SET_ESC":1257.13,"SET_LFL":721.59,"SET_LMS":279.15,"SET_LMS3":539.34,"SET_MSC":217.68,"SET_OR1":674.16,"SET_OR3":467.21,"SET_PAM":754.23,"SET_RE1":476.76,"SET_VH1":647.83,"SET_VH3":436.41,"SET_VMA":662.22,"SET_ZR1":489.61,"SET_ZR3":223.42,"SET_ZR4":245.43,"SET_ZR5":368.13,"SET_ZR6":759.5,"SET_ZR7":289.03},"reconectadores":{"EAGR_R1":60.85,"EAGR_R2":93.3,"EAGR_R3":56.13,"EAGR_R4":77.94,"EBAY_R1":24.45,"EBAY_R2":83.39,"EBAY_R3":62.34,"EBAY_R4":44.78,"EBAY_R5":11.11,"ECD3_R2":30.79,"ECD3_R3":10.51,"ECDN_R1":170.06,"ECDN_R2":89.65,"ECDN_R3":91.7,"ECDN_R4":72.74,"ECDN_R6":145.28,"ECG1_R1":35.43,"ECG1_R11":61.12,"ECG1_R12":6.83,"ECG1_R13":138.59,"ECG1_R14":100.38,"ECG1_R2":249.37,"ECG1_R3":121.41,"ECG1_R4":77.88,"ECG1_R5":57.37,"ECG1_R6":40.56,"ECG1_R7":92.28,"ECG1_R8":97.03,"ECG1_R9":189.7,"ECG2_R1":80.12,"ECG2_R2":81.46,"ECG3_R1":83.41,"ECG3_R3":184.62,"ECG3_R4":70.68,"ECT2_R3":59.97,"ECT2_R4":9.45,"ECT2_R6":37.95,"ECT2_R8":21.16,"ECT2_RCH":57.62,"ECT2_RCTN":33.84,"EESC_R1":276.51,"EESC_R2":229.37,"EESC_R4":214.37,"EESC_R6":325.31,"ELFL_R1":94.47,"ELFL_R2":110.33,"ELFL_R3":28.91,"ELFL_R4":290.16,"ELMS3_R2":33.63,"ELMS3_R3":14.17,"ELMS3_R4":42.59,"ELMS3_R5":108.3,"ELMS3_R6":70.73,"ELMS_R1":128.54,"ELMS_R2":109.84,"ELMS_R3":31.55,"ELMS_R4":71.47,"ELMS_R5":98.96,"ELMS_R6":110.14,"EMSC_R1":41.08,"EMSC_R2":50.6,"EMSC_R3":71.11,"EMSC_R4":14.02,"EMSC_R5":25.58,"EMSC_R6":15.28,"EOR1_R1":151.46,"EOR1_R2":221.02,"EOR1_R3":135.33,"EOR1_R4":134.7,"EOR1_R5":76.86,"EOR1_R6":23.16,"EOR1_R7":68.27,"EOR1_R8":74.92,"EOR3_R1":64.24,"EOR3_R2":100.08,"EOR3_R3":51.21,"EOR3_R4":123.08,"EOR3_R5":36.51,"EOR3_R6":143.3,"EPAM_R1":270.33,"EPAM_R2":254.85,"EPAM_R3":69.45,"EPAM_R4":159.61,"ERE1_R2":34.5,"EVH1_R1":121.11,"EVH1_R10":36.85,"EVH1_R11":17.47,"EVH1_R12":84.86,"EVH1_R13":145.82,"EVH1_R2":241.75,"EVH1_R3":149.51,"EVH1_R4":50.44,"EVH1_R5":53.69,"EVH1_R6":117.03,"EVH1_R7":56.55,"EVH1_R8":68.72,"EVH1_R9":66.84,"EVH3_R4":22.72,"EVH3_R5":48.6,"EVMA_R1":101.2,"EVMA_R2":9.72,"EVMA_R3":126.47,"EVMA_R4":143.4,"EVMA_R5":142.8,"EVMA_R6":9.56,"EVMA_R7":23.37,"EVMA_R8":105.71,"EZR1_R1":132.74,"EZR1_R10":30.17,"EZR1_R11":70.06,"EZR1_R12":69.36,"EZR1_R14":80.83,"EZR1_R15":86.31,"EZR1_R2":67.81,"EZR1_R3":61.16,"EZR1_R4":62.56,"EZR1_R5":26.49,"EZR1_R6":44.11,"EZR1_R7":102.99,"EZR1_R9":30.89,"EZR3_R3":49.93,"EZR3_R4":33.13,"EZR3_R5":37.86,"EZR3_R6":74.48,"EZR4_R1":112.69,"EZR4_R2":237.81,"EZR5_R1":122.49,"EZR5_R2":22.93,"EZR5_R3":62.4,"EZR5_R5":58.4,"EZR5_R6":68.78,"EZR6_R1":133.91,"EZR6_R2":4.4,"EZR6_R3":277.27,"EZR6_R4":232.0},"seccionadores":{" EVMA_R1S3":6.06,"Conectado directamente del reconectador":256.47,"EAGR_R1S1":1.13,"EAGR_R1S3":16.72,"EAGR_R1S5":18.69,"EAGR_R1S7":1.04,"EAGR_R2S1":57.43,"EAGR_R2S2":12.63,"EAGR_R2S3":23.24,"EAGR_R3S1":8.42,"EAGR_R3S2":4.83,"EAGR_R3S3":42.87,"EAGR_R4S1":77.94,"EBAY_R1S1":3.04,"EBAY_R1S2":1.5,"EBAY_R1S3":19.91,"EBAY_R2S1":31.41,"EBAY_R2S2":34.13,"EBAY_R2S3":17.86,"EBAY_R3S1":14.55,"EBAY_R3S2":6.47,"EBAY_R3S3":15.34,"EBAY_R3S4":25.99,"EBAY_R4S1":5.42,"EBAY_R4S2":3.85,"EBAY_R4S3":17.06,"EBAY_R4S4":9.23,"EBAY_R4S5":9.22,"EBAY_R5S1":9.17,"EBAY_R5S2":0.45,"EBAY_R5S3":1.49,"ECD3_R2S1":6.58,"ECD3_R2S2":24.21,"ECD3_R3S2":10.51,"ECDN_R1S1":57.18,"ECDN_R1S2":48.01,"ECDN_R1S3":64.87,"ECDN_R2S1":23.58,"ECDN_R2S2":31.02,"ECDN_R2S3":4.64,"ECDN_R2S4":16.57,"ECDN_R2S5":13.85,"ECDN_R3S1":43.08,"ECDN_R3S2":10.51,"ECDN_R3S3":38.11,"ECDN_R4S2":23.53,"ECDN_R4S3":42.69,"ECDN_R4S4":6.51,"ECDN_R6S1":69.5,"ECDN_R6S2":75.78,"ECG1_R11S1":42.17,"ECG1_R11S3":18.96,"ECG1_R13S1":93.79,"ECG1_R13S2":44.81,"ECG1_R14S1":80.73,"ECG1_R14S2":19.66,"ECG1_R1S3":13.8,"ECG1_R1S4":21.63,"ECG1_R2S1":8.13,"ECG1_R2S2":139.54,"ECG1_R2S6":63.45,"ECG1_R2S7":38.24,"ECG1_R3S1":40.7,"ECG1_R3S2":59.98,"ECG1_R3S3":4.56,"ECG1_R3S4":16.17,"ECG1_R4S3":37.44,"ECG1_R4S4":40.45,"ECG1_R5S1":19.25,"ECG1_R5S2":17.54,"ECG1_R5S5":20.57,"ECG1_R6S1":23.83,"ECG1_R6S2":8.65,"ECG1_R6S3":8.08,"ECG1_R7S1":18.08,"ECG1_R7S2":74.2,"ECG1_R8S1":48.67,"ECG1_R8S2":8.37,"ECG1_R8S3":40.0,"ECG1_R9S1":78.18,"ECG1_R9S2":62.49,"ECG1_R9S3":49.03,"ECG2_R1S2":29.79,"ECG2_R1S3":50.33,"ECG2_R2S1":32.01,"ECG2_R2S2":49.45,"ECG3_R1S1":31.45,"ECG3_R1S2":51.95,"ECG3_R3S2":184.62,"ECG3_R4S2":44.71,"ECG3_R4S3":25.97,"ECT2_R3S1":9.04,"ECT2_R6S1":30.75,"ECT2_R6S2":7.2,"ECT2_RCHS1":17.34,"ECT2_RCHS2":31.03,"ECT2_RCHS3":1.36,"ECT2_RCTNS1":30.25,"ECT2_RCTNS2":3.58,"EESC_R1S1":150.36,"EESC_R1S2":91.35,"EESC_R1S3":34.8,"EESC_R2S1":15.02,"EESC_R2S2":17.76,"EESC_R2S3":7.09,"EESC_R2S4":189.5,"EESC_R4S1":80.8,"EESC_R4S2":103.16,"EESC_R4S3":30.42,"EESC_R6S1":10.41,"EESC_R6S2":287.89,"EESC_R6S3":27.01,"ELFL_R1S1":23.55,"ELFL_R1S2":23.02,"ELFL_R1S3":47.9,"ELFL_R2S1":50.2,"ELFL_R2S4":60.13,"ELFL_R3S1":22.59,"ELFL_R3S2":6.32,"ELFL_R4S1":130.23,"ELFL_R4S2":124.74,"ELFL_R4S3":27.75,"ELFL_R4S4":7.43,"ELMS3_R3S1":13.89,"ELMS3_R4S1":11.2,"ELMS3_R4S2":20.38,"ELMS3_R4S3":11.01,"ELMS3_R6S1":38.06,"ELMS3_R6S2":32.67,"ELMS_R1S1":29.47,"ELMS_R1S2":82.26,"ELMS_R1S3":6.65,"ELMS_R1S4":16.67,"ELMS_R1S5":10.0,"ELMS_R1S6":0.3,"ELMS_R1S8":16.81,"ELMS_R2S1":25.37,"ELMS_R2S2":9.77,"ELMS_R2S3":14.24,"ELMS_R2S4":57.35,"ELMS_R3S2":24.26,"ELMS_R3S3":7.29,"ELMS_R4S1":10.09,"ELMS_R4S3":54.91,"ELMS_R4S5":6.47,"ELMS_R5S1":58.14,"ELMS_R5S2":40.82,"ELMS_R6S1":85.65,"ELMS_R6S2":24.49,"EMSC_R1S1":2.92,"EMSC_R1S2":11.79,"EMSC_R1S3":26.36,"EMSC_R2S1":10.49,"EMSC_R2S2":8.61,"EMSC_R2S3":5.06,"EMSC_R2S4":23.73,"EMSC_R2S5":2.71,"EMSC_R3S1":5.28,"EMSC_R3S2":3.8,"EMSC_R3S3":57.0,"EMSC_R3S4":5.03,"EMSC_R4S1":4.38,"EMSC_R4S2":2.92,"EMSC_R4S3":4.14,"EMSC_R4S4":2.57,"EMSC_R5S1":8.45,"EMSC_R5S2":7.81,"EMSC_R5S3":8.2,"EMSC_R5S6":1.12,"EMSC_R6S1":9.29,"EMSC_R6S2":5.59,"EMSC_R6S3":0.41,"EOR1_R1S1":14.62,"EOR1_R1S2":35.51,"EOR1_R1S3":101.33,"EOR1_R2S1":20.32,"EOR1_R2S2":24.02,"EOR1_R2S3":176.68,"EOR1_R3S1":16.92,"EOR1_R3S3":118.41,"EOR1_R4S1":24.97,"EOR1_R4S2":15.07,"EOR1_R4S3":94.67,"EOR1_R5S1":11.29,"EOR1_R5S2":40.11,"EOR1_R5S3":25.47,"EOR1_R6S1":7.47,"EOR1_R6S2":15.69,"EOR1_R7S1":26.57,"EOR1_R7S2":6.55,"EOR1_R7S3":35.16,"EOR1_R8S1":74.92,"EOR3_R1S1":37.75,"EOR3_R1S2":26.49,"EOR3_R2S1":79.3,"EOR3_R2S2":20.78,"EOR3_R3S1":40.1,"EOR3_R3S2":11.12,"EOR3_R4S1":23.3,"EOR3_R4S2":46.74,"EOR3_R4S3":53.04,"EOR3_R5S1":13.17,"EOR3_R5S2":23.34,"EOR3_R6S1":14.07,"EOR3_R6S2":129.23,"EPAM_R1S1":115.05,"EPAM_R1S2":72.68,"EPAM_R1S3":82.6,"EPAM_R2S1":1.12,"EPAM_R2S4":3.88,"EPAM_R2S7":249.84,"EPAM_R3S1":44.26,"EPAM_R3S2":25.19,"EPAM_R4S2":159.61,"ERE1_R2S1":22.18,"ERE1_R2S2":9.78,"ERE1_R2S3":1.69,"EVH1_R10S1":7.63,"EVH1_R10S2":29.22,"EVH1_R11S1":17.47,"EVH1_R12S1":6.58,"EVH1_R12S2":9.05,"EVH1_R12S3":69.23,"EVH1_R13S1":17.22,"EVH1_R13S2":31.14,"EVH1_R13S3":97.46,"EVH1_R1S1":31.95,"EVH1_R1S2":12.37,"EVH1_R1S3":76.79,"EVH1_R2S1":26.05,"EVH1_R2S2":36.37,"EVH1_R2S3":28.89,"EVH1_R2S4":66.3,"EVH1_R2S5":84.13,"EVH1_R3S1":137.97,"EVH1_R3S2":11.54,"EVH1_R4S1":15.58,"EVH1_R4S2":24.48,"EVH1_R4S3":10.38,"EVH1_R5S2":12.28,"EVH1_R5S3":28.39,"EVH1_R5S4":13.02,"EVH1_R6S1":14.52,"EVH1_R6S2":60.85,"EVH1_R6S3":41.65,"EVH1_R7S1":4.04,"EVH1_R7S2":41.55,"EVH1_R7S3":10.96,"EVH1_R8S2":21.69,"EVH1_R8S3":24.36,"EVH1_R8S4":14.3,"EVH1_R8S5":8.37,"EVH1_R9S1":9.68,"EVH1_R9S2":57.16,"EVH3_R4S1":22.72,"EVH3_R5S1":29.12,"EVH3_R5S2":19.48,"EVMA_R1S1":57.23,"EVMA_R1S2":12.42,"EVMA_R1S3":25.49,"EVMA_R2S1":9.72,"EVMA_R3S1":8.18,"EVMA_R3S2":11.23,"EVMA_R3S3":73.76,"EVMA_R3S4":33.3,"EVMA_R4S1":44.9,"EVMA_R4S2":26.58,"EVMA_R4S3":17.18,"EVMA_R4S4":54.74,"EVMA_R5S1":55.0,"EVMA_R5S3":9.1,"EVMA_R5S4":40.06,"EVMA_R5S5":38.64,"EVMA_R6S1":9.56,"EVMA_R7S2":23.37,"EVMA_R8S1":58.41,"EVMA_R8S2":26.09,"EVMA_R8S3":21.2,"EZR15_R15S3":30.95,"EZR1_R10S2":17.5,"EZR1_R10S3":12.66,"EZR1_R11S1":42.06,"EZR1_R11S2":28.0,"EZR1_R12S1":27.35,"EZR1_R12S2":42.01,"EZR1_R14S1":31.52,"EZR1_R14S2":49.31,"EZR1_R15S1":15.16,"EZR1_R15S2":40.2,"EZR1_R1S1":68.09,"EZR1_R1S2":21.33,"EZR1_R1S3":21.9,"EZR1_R2S1":15.02,"EZR1_R2S2":52.79,"EZR1_R3S2":28.76,"EZR1_R3S3":18.92,"EZR1_R3S4":13.37,"EZR1_R4S2":35.52,"EZR1_R4S3":27.04,"EZR1_R5S1":11.5,"EZR1_R5S2":9.43,"EZR1_R5S3":0.66,"EZR1_R5S4":2.47,"EZR1_R6S1":12.93,"EZR1_R6S2":22.9,"EZR1_R6S4":8.29,"EZR1_R7S1":61.23,"EZR1_R7S2":41.33,"EZR1_R9S1":14.03,"EZR1_R9S2":16.86,"EZR3_R3S1":38.36,"EZR3_R3S2":11.57,"EZR3_R4S1":24.43,"EZR3_R4S2":8.7,"EZR3_R5S1":35.04,"EZR3_R5S2":2.82,"EZR3_R6S1":16.6,"EZR3_R6S2":57.88,"EZR4_R1S1":26.53,"EZR4_R1S3":86.17,"EZR4_R2S1":23.76,"EZR4_R2S2":27.22,"EZR4_R2S3":14.16,"EZR4_R2S5":172.67,"EZR5_R1S1":19.66,"EZR5_R1S2":102.83,"EZR5_R2S3":22.93,"EZR5_R3S1":58.28,"EZR5_R3S2":4.12,"EZR5_R5S1":22.59,"EZR5_R5S2":35.8,"EZR5_R6S1":28.99,"EZR5_R6S2":39.78,"EZR6_R1S1":100.12,"EZR6_R1S2":33.79,"EZR6_R2S2":4.4,"EZR6_R3S1":126.38,"EZR6_R3S2":150.9,"EZR6_R4S1":232.0},"rec_info":{"EAGR_R1":{"dt":60.85,"set":"SET_AGR","alimentador":"ETR OR2 H15","seccionadores":{"Conectado directamente del reconectador":{"dt":23.27,"instalaciones":["PAG.a-900","PAG.a-934","PAG.xp-933","PAG-21","PAG-27","PAG-3","PAG-32","PAG-34","PAG-824","PAG-831","PAG-848","PAG-849","PAG-851","PAG-854","PAG-858","PAG-859","PAG-863","PAG-864","PAG-865","PAG-867","PAG-885","PAG-935","PAG-975"],"count":23},"EAGR_R1S1":{"dt":1.13,"instalaciones":["PAG-805","PAG-822"],"count":2},"EAGR_R1S3":{"dt":16.72,"instalaciones":["PAG.a-888","PAG-812","PAG-813","PAG-814","PAG-821","PAG-871","PAG-889","PAG-890","PAG-901","PAG-903","PAG-908","PEPa.xp-1","PEPa-10","PEPa-12","PEPa-15","PEPa-4","PEPa-5","PEPa-6","PEPa-7","PEPa-8","PEPa-9"],"count":21},"EAGR_R1S5":{"dt":18.69,"instalaciones":["PAG-844","PAG-847","PAG-850","PAG-855","PAG-857","PAG-873","PAG-874","PAG-875","PAG-876","PAG-886","PAG-887","PAG-896","PAG-897","PAG-898","PAG-904","PAG-925","PAG-927","PAG-932","PAG-938","PAG-939","PAG-940","PAG-941"],"count":22},"EAGR_R1S7":{"dt":1.04,"instalaciones":["PAG-832","PAG-846","PAG-899"],"count":3}}},"EAGR_R2":{"dt":93.3,"set":"SET_AGR","alimentador":"ETR OR2 H15","seccionadores":{"EAGR_R2S1":{"dt":57.43,"instalaciones":["PAG-1000","PAG-1001","PAG-45","PAG-47","PAG-802","PAG-883","PAG-910","PAG-915","PAG-956","PAG-957","PAG-959","PAG-987","PAG-988","PAG-993","PAG-994","PAG-996","PAG-998","PAG-999","PAG-1018","PAG-1017","PAG-1026","PAG-1025"],"count":22},"EAGR_R2S2":{"dt":12.63,"instalaciones":["PAG-881","PAG-882","PAG-911","PAG-928","PAG-929","PAG-931"],"count":6},"EAGR_R2S3":{"dt":23.24,"instalaciones":["PAG-1008","PAG-15","PAG-37","PAG-41","PAG-42","PAG-5","PAG-6","PAG-880","PAG-930","PAG-982","PAG-989","PAG-990","SAG-22"],"count":13}}},"EAGR_R3":{"dt":56.13,"set":"SET_AGR","alimentador":"ETR OR2 H15","seccionadores":{"EAGR_R3S1":{"dt":8.42,"instalaciones":["A-10","PAG-17","PAG-18","PAG-877","PAG-913","SAG-6"],"count":6},"EAGR_R3S2":{"dt":4.83,"instalaciones":["PAG-972","PT.a-803","PT-801","SAG-8"],"count":4},"EAGR_R3S3":{"dt":42.87,"instalaciones":["PAG-1","PAG-1003","PAG-1004","PAG-63","PAG-66","PAG-8","PAG-808","PAG-879","PAG-884","PAG-895","PAG-914","PAG-917","PAG-919","PAG-921","PAG-923","PAG-924","PAG-943","PAG-944","PAG-973","PAG-978","PAG-979","SAG-11","SAG-2"],"count":23}}},"EAGR_R4":{"dt":77.94,"set":"SET_AGR","alimentador":"ETR OR2 H15","seccionadores":{"EAGR_R4S1":{"dt":77.94,"instalaciones":["CHU-11","CHU-12","CHU-14","CHU-16","CHU-17","CHU-18","CHU-19","CHU-20","CHU-21","CHU-27","CHU-3","CHU-4","CHU-5","CHU-7","CHU-8","CHU-9","PChu.x-1011","PCHU-1001","PCHU-1002","PCHU-1003","PCHU-1005","PCHU-1012","PCHU-1013","PKo.a-4","PKo.a-5","PKo.x-1","PKo-17","PKo-18","PCHU-1014","CHU-15","PAG.xp-1028","PCHU-1015"],"count":32}}},"EBAY_R1":{"dt":24.45,"set":"SET_BAY","alimentador":"ETR OR2 H11","seccionadores":{"EBAY_R1S1":{"dt":3.04,"instalaciones":["PB-858","PB-885","PB-932","PB-941"],"count":4},"EBAY_R1S2":{"dt":1.5,"instalaciones":["PB-803","PB-822","PB-831","PB-902"],"count":4},"EBAY_R1S3":{"dt":19.91,"instalaciones":["PB.a-943","PB-859","PB-889","PB-895","PB-898","PB-904","PB-926","PB-927","PB-930","PB-933","PB-936","PB-1007","PB-894","PB-942(d)","PB-938(d)"],"count":15}}},"EBAY_R2":{"dt":83.39,"set":"SET_BAY","alimentador":"ETR OR2 H11","seccionadores":{"EBAY_R2S1":{"dt":31.41,"instalaciones":["PAG-992","PB.a-948","PB-808","PB-815","PB-826","PB-953","PB-954","PB-952","PB-940","PB-955","PB-801","PB-909","PB-977","PB-992"],"count":14},"EBAY_R2S2":{"dt":34.13,"instalaciones":["PB-809","PB-813","PB-819","PB-820","PB-827","PB-853","PB-950","PB-868","PB-949"],"count":9},"EBAY_R2S3":{"dt":17.86,"instalaciones":["PB-805","PB-844","PB-870","PB-873","PB-880","PB-890","PB-912","PB-946","PB-872"],"count":9}}},"EBAY_R3":{"dt":62.34,"set":"SET_BAY","alimentador":"ETR OR2 H11","seccionadores":{"EBAY_R3S1":{"dt":14.55,"instalaciones":["PB-816","PB-833","PB-834","PB-843","PB-846","PB-850","PB-857","PB-860","PB-884","PB-945","PB-987"],"count":11},"EBAY_R3S2":{"dt":6.47,"instalaciones":["PB-824","PB-852","PB-861","PB-995(d)"],"count":4},"EBAY_R3S3":{"dt":15.34,"instalaciones":["PB-837","PB-838","PB-848","PB-862","PB-863","PB-900"],"count":6},"EBAY_R3S4":{"dt":25.99,"instalaciones":["PB-1001","PB-856","PB-864","PB-865","PB-866","PB-875","PB-876","PB-879","PB-906","PB-910","PB-990(d)"],"count":11}}},"EBAY_R4":{"dt":44.78,"set":"SET_BAY","alimentador":"ETR OR2 H11","seccionadores":{"EBAY_R4S1":{"dt":5.42,"instalaciones":["PHUE-826","PHUE-836","PHUE-837","PHUE-842","PHUE-844","PHUE-852","PHUE-876","PHUE-881"],"count":8},"EBAY_R4S2":{"dt":3.85,"instalaciones":["PHUE-815","PHUE-825","PHUE-827","PHUE-833","PHUE-835","PHUE-840","PHUE-841"],"count":7},"EBAY_R4S3":{"dt":17.06,"instalaciones":["PHUE.a-878","PHUE-819","PHUE-831","PHUE-847","PHUE-869","PHUE-872","PHUE-886","PHUE-887"],"count":8},"EBAY_R4S4":{"dt":9.23,"instalaciones":["HUE-1","PHUE-2","PHUE-4","PHUE-801","PHUE-802","PHUE-803","PHUE-804","PHUE-805","PHUE-806","PHUE-807","PHUE-808","PHUE-811"],"count":12},"EBAY_R4S5":{"dt":9.22,"instalaciones":["PHUE-848","PHUE-849","PHUE-859","PHUE-871","PHUE-873","PHUE-874"],"count":6}}},"EBAY_R5":{"dt":11.11,"set":"SET_BAY","alimentador":"ETR OR2 H11","seccionadores":{"EBAY_R5S1":{"dt":9.17,"instalaciones":["A-18","PAG-64","PAG-947","PAG-949(I)","PAG-953","PAG-954","PAG-955","PAG-961","PAG-963","PAGS-804"],"count":10},"EBAY_R5S2":{"dt":0.45,"instalaciones":["PAGS-802","PAGS-812"],"count":2},"EBAY_R5S3":{"dt":1.49,"instalaciones":["A-19","PAG-962"],"count":2}}},"ECD3_R2":{"dt":30.79,"set":"SET_CD3","alimentador":"ETR CD2 H05","seccionadores":{"ECD3_R2S1":{"dt":6.58,"instalaciones":["PCD-990","PCD-992","PCD-994","PCD-995","PCD-996","PCD-997"],"count":6},"ECD3_R2S2":{"dt":24.21,"instalaciones":["PCD-1113","PCD-1194(I)","PCD-924","PCD-962","PCD-963","PCD-965","PCD-968","PCD-969","PCD-970","PCG-818","PCG-1186(d)"],"count":11}}},"ECD3_R3":{"dt":10.51,"set":"SET_CD3","alimentador":"ETR CD2 H05","seccionadores":{"ECD3_R3S2":{"dt":10.51,"instalaciones":["PCT-370","PCT-379(d)","PCT-262","PCT-375"],"count":4}}},"ECDN_R1":{"dt":170.06,"set":"SET_CDN","alimentador":"ETR CD2 H02","seccionadores":{"ECDN_R1S1":{"dt":57.18,"instalaciones":["L-25","PCD-1008","PCD-1027","PCD-1068","PCD-1073","PCD-1081","PCD-1103","PCD-1123","PCD-185","PCD-241","PCD-262","PCD-43","PCD-5","PCD-59","PCD-863","PCD-986","PCD-23","PCD-1343","PCD-1340(d)"],"count":19},"ECDN_R1S2":{"dt":48.01,"instalaciones":["L-12","PCD-1009","PCD-1020","PCD-1032","PCD-1071","PCD-1085","PCD-1262(d)","PCD-233","PCD-268","PCD-3","PCD-41","PCD-42","PCD-76","PCD-987","PCoi.xp-2","PCD-1342(d)"],"count":16},"ECDN_R1S3":{"dt":64.87,"instalaciones":["PCD-1051","PCD-1060","PCD-1181(d)","PCD-1223(I)","PCD-1263","PCD-178","PCD-181","PCD-263","PCD-805","PCD-855","PCD-856","PCD-930","PCD-976","PCD-984","PCD-1054(d)"],"count":15}}},"ECDN_R2":{"dt":89.65,"set":"SET_CDN","alimentador":"ETR CD2 H02","seccionadores":{"ECDN_R2S1":{"dt":23.58,"instalaciones":["PCD-1","PCD-1151","PCD-177","PCD-199","PCD-215","PCD-222","PCD-224","PCD-238","PCD-251","PCD-830"],"count":10},"ECDN_R2S2":{"dt":31.02,"instalaciones":["L-18","PCD-1086","PCD-189","PCD-197","PCD-223","PCD-226","PCD-250","PCD-8","PCD-9"],"count":9},"ECDN_R2S3":{"dt":4.64,"instalaciones":["PCD-1033","PCD-1074","PCD-21","PCD-64","PCD-807"],"count":5},"ECDN_R2S4":{"dt":16.57,"instalaciones":["PCD-10","PCD-255","PCD-271","PCD-864"],"count":4},"ECDN_R2S5":{"dt":13.85,"instalaciones":["L-17","PCD-1026","PCD-1152","PCD-15","PCD-225","PCD-253","PCD-254"],"count":7}}},"ECDN_R3":{"dt":91.7,"set":"SET_CDN","alimentador":"ETR CD2 H02","seccionadores":{"ECDN_R3S1":{"dt":43.08,"instalaciones":["PCD-1001","PCD-1061","PCD-175","PCD-264","PCD-802","PCD-857","PCD-978","PCoi-3","PCD-1333","PCD-1332"],"count":10},"ECDN_R3S2":{"dt":10.51,"instalaciones":["PCD-858","PCD-1331(d)"],"count":2},"ECDN_R3S3":{"dt":38.11,"instalaciones":["PCD-1224","PCD-1225","PCD-1242(d)","PCD-1246","PCD-173","PCD-179","PCD-256","PCD-257","PCD-853","PCD-854","PCD-868","PCD-873","PCD-876","PCD-926(I)","PCD-973","PCD-999"],"count":16}}},"ECDN_R4":{"dt":72.74,"set":"SET_CD3","alimentador":"ETR CD2 H05","seccionadores":{"ECDN_R4S2":{"dt":23.53,"instalaciones":["PCG-1067","PCG-1229","PCG-239","PCG-247","PCG-900","PCG-912","PCG-917","PCG-1310(d)"],"count":8},"ECDN_R4S3":{"dt":42.69,"instalaciones":["PCG-1227","PCG-203","PCG-248","PCG-263","PCG-269","PCG-804","PCG-830","PCG-901","PCG-902","PCG-904","PCG-1311","PCG-1231","PCG-1324","PCG-1326"],"count":14},"ECDN_R4S4":{"dt":6.51,"instalaciones":["PCD-1036","PCD-1041","PCD-1043","PCD-1046","PCD-1048","PCD-1092","PCD-1182","PCD-1183","PCG-242"],"count":9}}},"ECDN_R6":{"dt":145.28,"set":"SET_CD3","alimentador":"ETR CD2 H05","seccionadores":{"ECDN_R6S1":{"dt":69.5,"instalaciones":["PCD.xp-1039","PCD-1037","PCD-1044","PCD-1045","PCD-1091","PCD-1137","PCD-1138","PCD-1140","PCD-1141","PCD-1143","PCD-1144(I)","PCD-1145","PCD-1146","PCD-1185","PCD-1187(I)","PCD-1192","PCD-1202","PCD-1203","PCD-1204","PCD-1215","PCD-1216","PCD-1221","PCD-1286","PCD-1287","PCD-1288","PCD-1289","PCD-1306","PCD-1307","PCD-1308","PCD-1311","PCD-1311","PCD-1312","PCD-1312","PCD-1313","PCD-1320","PCD-1318"],"count":36},"ECDN_R6S2":{"dt":75.78,"instalaciones":["PCD.xp-1162(d)","PCD-172","PCD-809","PCD-814","PCD-818","PCD-828","PCD-837","PCD-839","PCD-849","PCD-925","PLP-1","PLP-3","PLP-704","PLP-707","PLP-711","PLP-806","PLP-809","PLP-810","PLP-812","PLP-815","PLP-818(d)","PLP-820","PLP-821","PLP-825","PLP-828(d)","PLP-830(d)","PLP-837","PLP-838","PLP-843","PLP-845","PLP-854","PLP-859","PLP-860","PPC.a-814","PPC-804","PPC-806","PEC-826","PCD-1339"],"count":38}}},"ECG1_R1":{"dt":35.43,"set":"SET_CG1","alimentador":"ETR CD2 H17","seccionadores":{"ECG1_R1S3":{"dt":13.8,"instalaciones":["PCG-1017","PCG-1026","PCG-1027","PCG-1050","PCG-1051","PCG-1058","PCG-1059","PCG-1064","PCG-1087","PCG-141","PCG-149","PCG-943"],"count":12},"ECG1_R1S4":{"dt":21.63,"instalaciones":["PCG-1020","PCG-1021","PCG-1022","PCG-1029","PCG-1030","PCG-1033","PCG-1055","PCG-1056","PCG-1085","PCG-1089","PCG-1093","PCG-837","PCG-953"],"count":13}}},"ECG1_R11":{"dt":61.12,"set":"SET_CG2","alimentador":"ETR CD2 H07","seccionadores":{"ECG1_R11S1":{"dt":42.17,"instalaciones":["PCG-1043","PCG-1044","PCG-1073","PCG-1074","PCG-1175","PCG-1176","PCG-1178","PCG-1201(d)","PCG-1202(d)","PCG-1204(d)","PCG-1211","PCG-1281","PCG-22","PCG-281","PCG-42","PCG-853","PCG-856","PCG-967"],"count":18},"ECG1_R11S3":{"dt":18.96,"instalaciones":["PCG-1154","PCG-1177(d)","PCG-1192(d)","PCG-1193(d)","PCG-1198(d)","PCG-1200(d)","PCG-1279(d)","T-106"],"count":8}}},"ECG1_R12":{"dt":6.83,"set":"SET_CG1","alimentador":"ETR CD2 H17","seccionadores":{"Conectado directamente del reconectador":{"dt":6.83,"instalaciones":["PCD-1180(d)"],"count":1}}},"ECG1_R13":{"dt":138.59,"set":"SET_CD3","alimentador":"ETR CD2 H05","seccionadores":{"ECG1_R13S1":{"dt":93.79,"instalaciones":["PCD-1266(d)","PCD-1303","PCD-1304(d)","PCD-58","PCD-813","PCD-816","PCD-817","PCD-821","PCD-822","PCD-831","PCD-91","PCD-92","PCD-1316","PCDN-819(d)"],"count":14},"ECG1_R13S2":{"dt":44.81,"instalaciones":["PCD-1011","PCD-1012","PCD-1059","PCD-1076","PCD-1078","PCD-1094","PCD-1095","PCD-1109","PCD-1131","PCD-1244","PCD-1291","PCD-865","PCD-1336(d)"],"count":13}}},"ECG1_R14":{"dt":100.38,"set":"SET_CG1","alimentador":"ETR CD2 H17","seccionadores":{"ECG1_R14S1":{"dt":80.73,"instalaciones":["PCD-1098","PCD-1128","PCD-1129","PCD-1130","PCD-1132","PCD-1165","PCD-1166","PCD-1167(d)","PCD-1170","PCD-1208","PCD-1211","PCD-1290","PCD-1297(d)","PCD-1295(d)","PCD-1293","PCD-1298(d)","PCD-1296(d)","PCG-1302","PCD-1329(d)","PCG-1329(d)","PCD-1334(d)","PCG-1346(d)","PCG-1347(d)"],"count":23},"ECG1_R14S2":{"dt":19.66,"instalaciones":["PCD-1057","PCD-1096(d)","PCD-1099","PCD-1101","PCD-1102","PCD-1126(d)","PCD-1240(d)","PCD-1254(d)","PCD-1269(d)","PCD-1271(d)"],"count":10}}},"ECG1_R2":{"dt":249.37,"set":"SET_RE1","alimentador":"ETR CD2 H19","seccionadores":{"ECG1_R2S1":{"dt":8.13,"instalaciones":["PCG-1246(d)","PCG-1291"],"count":2},"ECG1_R2S2":{"dt":139.54,"instalaciones":["PCG-1120","PCG-1121","PCG-1143","PCG-1144","PCG-1180","PCG-49","PCG-838","PCG-844","PCG-854","PCG-864","PCG-1314(d)","PCG-1337","PCG-1341","PCG-1342","PCG-1339","PCG-1355","PCG-1357(d)"],"count":17},"ECG1_R2S6":{"dt":63.45,"instalaciones":["PCG-123","PCG-273","PCG-703","PCG-827","PCG-961","PCG-1306","PCG-1336","PCG-926","PCG-1331","PCG-1338"],"count":10},"ECG1_R2S7":{"dt":38.24,"instalaciones":["PCG-124","PCG-266","PCG-803","PCG-857","PCG-1305(d)","PCG-1307","PCG-1334(d)","PCG-1333"],"count":8}}},"ECG1_R3":{"dt":121.41,"set":"SET_RE1","alimentador":"ETR CD2 H19","seccionadores":{"ECG1_R3S1":{"dt":40.7,"instalaciones":["PCG-1069","PCG-869","PCG-870","PCG-871","PCG-878","PCG-929","PCG-940","PCG-952","PCG-1300","PCG-1303","PCG-1297(d)","PCG-1299(d)","PCG-1298(d)"],"count":13},"ECG1_R3S2":{"dt":59.98,"instalaciones":["PCG-1114","PCG-1126","PCG-1130","PCG-1218(d)","PCG-1252(d)","PCG-1264(d)","PCG-1277","PCG-1278(d)","PCG-1296","PCG-142","PCG-147","PCG-60","PCG-66","PCG-70","PCG-875","PCG-876","PCG-889","PCG-891","PCG-895"],"count":19},"ECG1_R3S3":{"dt":4.56,"instalaciones":["PCG-280","PCG-826","PCG-828","PCG-888"],"count":4},"ECG1_R3S4":{"dt":16.17,"instalaciones":["PCG-1269(d)","PCG-1283(d)","PCG-845","PCG-855","PCG-858","PCG-9"],"count":6}}},"ECG1_R4":{"dt":77.88,"set":"SET_CG2","alimentador":"ETR CD2 H07","seccionadores":{"ECG1_R4S3":{"dt":37.44,"instalaciones":["PCG-1161(d)","PCG-1216","PCG-144","PCG-19","PCG-220","PCG-221","PCG-224","PCG-23","PCG-264","PCG-36","PCG-709","PCG-801","PCG-809","PCG-810"],"count":14},"ECG1_R4S4":{"dt":40.45,"instalaciones":["PCG-1081","PCG-1091","PCG-112","PCG-1187","PCG-129","PCG-189","PCG-218","PCG-916","PCG-922","PCG-38","PCG-1312"],"count":11}}},"ECG1_R5":{"dt":57.37,"set":"SET_CG1","alimentador":"ETR CD2 H17","seccionadores":{"ECG1_R5S1":{"dt":19.25,"instalaciones":["PCD-850","PCD-956","PCG-109","PCG-1166","PCG-1168","PCG-122","PCG-898","PCG-899","PCG-1304(d)","PCG-820","PCG-160"],"count":11},"ECG1_R5S2":{"dt":17.54,"instalaciones":["PCD-258","PCD-861","PCD-874","PCD-905","PCD-906(I)"],"count":5},"ECG1_R5S5":{"dt":20.57,"instalaciones":["PCD-1112(I)","PCD-1114","PCD-184","PCD-866","PCD-869","PCD-871","PCD-953","PCD-955"],"count":8}}},"ECG1_R6":{"dt":40.56,"set":"SET_CG1","alimentador":"ETR CD2 H17","seccionadores":{"ECG1_R6S1":{"dt":23.83,"instalaciones":["PCG-1052","PCG-1060","PCG-1063","PCG-1076","PCG-1086","PCG-1266","PCG-1280","PCG-1295","PCG-204","PCG-839","PCG-1294"],"count":11},"ECG1_R6S2":{"dt":8.65,"instalaciones":["PCG-67","PCG-75","PCG-887"],"count":3},"ECG1_R6S3":{"dt":8.08,"instalaciones":["PCG-1128","PCG-143","PCG-873","PCG-886","PCG-1345"],"count":5}}},"ECG1_R7":{"dt":92.28,"set":"SET_CG1","alimentador":"ETR CD2 H17","seccionadores":{"ECG1_R7S1":{"dt":18.08,"instalaciones":["PCD-1168","PCD-1169","PCD-119","PCoi-6","PCD-1328","PCG-1323","PCD-1264"],"count":7},"ECG1_R7S2":{"dt":74.2,"instalaciones":["PCD-108","PCD-1252","PCD-1253","PCD-826","PCD-829","PCD-894","PCD-895","PCD-896","PCD-902","PCD-914","PCD-915","PCD-916","PCD-940","PCD-942","PCD-957","PCD-958","PCD-960","PCD-961","PCD-974","PCD-911","PCD-909","PCD-1324","PCD-913","PCD-1325"],"count":24}}},"ECG1_R8":{"dt":97.03,"set":"SET_CG1","alimentador":"ETR CD2 H17","seccionadores":{"ECG1_R8S1":{"dt":48.67,"instalaciones":["PCD-1172","PCD-1174","PCD-1175","PCD-261","PCD-45","PCD-820","PCD-823","PCD-825"],"count":8},"ECG1_R8S2":{"dt":8.37,"instalaciones":["PCD-1268","PCD-52"],"count":2},"ECG1_R8S3":{"dt":40.0,"instalaciones":["PCD-1058","PCD-109(I)","PCD-1116","PCDN-806","PCDN-808","PCDN-810","PCDN-814(d)","T-118","PCDN-816(d)","PCDN-815(d)"],"count":10}}},"ECG1_R9":{"dt":189.7,"set":"SET_CG1","alimentador":"ETR CD2 H17","seccionadores":{"ECG1_R9S1":{"dt":78.18,"instalaciones":["PCD-1125(d)","PCD-1178","PCD-1281","PCD-1283","PCD-922","PCG-1167","PCG-1185","PCG-1188","PCG-1215(d)","PCG-188","PCG-20","PCG-209","PCG-213","PCG-279","PCG-704","PCG-1301(d)","PCG-44","Pcoi-5(d)","Pcoi-9"],"count":19},"ECG1_R9S2":{"dt":62.49,"instalaciones":["PCD-1133","PCD-1135","PCD-1226","PCD-164","PCD-187","PCD-274","PCD-81","PCD-844","PCD-848","PCD-852","PCD-872","PCD-875","PCD-898","PCD-908","PCD-920","PCD-921","PCG-27","PCoi-8","PCD-907","PCD-1338(d)"],"count":20},"ECG1_R9S3":{"dt":49.03,"instalaciones":["PCD-1004","PCD-1070(d)","PCD-11","PCD-1280","PCD-79","PCD-899","PCD-900","PCD-903","PCD-967","PCD-982","PCoi.xp-1","PCoi-4"],"count":12}}},"ECG2_R1":{"dt":80.12,"set":"SET_CG2","alimentador":"ETR CD2 H07","seccionadores":{"ECG2_R1S2":{"dt":29.79,"instalaciones":["PCG-110","PCG-1191","PCG-1290","PCG-171","PCG-197","PCG-54","PCG-711","PCG-814","PCG-908","PCG-1321","PCG-1065","PCG-914"],"count":12},"ECG2_R1S3":{"dt":50.33,"instalaciones":["PCG-1190","PCG-1243","PCG-1251","PCG-1289","PCG-1292","PCG-1293(d)","PCG-813","PCG-921","PCG-949","PCG-955","PCG-1319","PCG-1318","PCG-1322","PCG-1325(d)","PCG-1328","PCG-1273(d)"],"count":16}}},"ECG2_R2":{"dt":81.46,"set":"SET_CG2","alimentador":"ETR CD2 H07","seccionadores":{"ECG2_R2S1":{"dt":32.01,"instalaciones":["PCG-1195(I)","PCG-1196","PCG-1207(II)","PCG-1208","PCG-1209","PCG-1221","PCG-1222","PCG-1223","PCG-1270(d)","PCG-1271","PCG-1272(d)","PCG-1284","PCG-817","PCG-840","PCG-1317"],"count":15},"ECG2_R2S2":{"dt":49.45,"instalaciones":["PCG-1045","PCG-1046","PCG-1084","PCG-1139","PCG-1157","PCG-1164(d)","PCG-1174","PCG-1179","PCG-1245(d)","PCG-1254(d)","PCG-1265","PCG-16","PCG-276","PCG-812","PCG-866","PCG-868","PCG-925(d)","PCG-1315(d)"],"count":18}}},"ECG3_R1":{"dt":83.41,"set":"SET_CG3","alimentador":"ETR CD2 H03","seccionadores":{"ECG3_R1S1":{"dt":31.45,"instalaciones":["PLP-822","PLP-827","PLP-839","PLP-849","PLP-863","PLP-861","PLP-876","PLP-877"],"count":8},"ECG3_R1S2":{"dt":51.95,"instalaciones":["PLP-2","PLP-805","PLP-811","PLP-831","PLP-836","PLP-841","PLP-842","PLP-846","PLP-848","PLP-856","PLP-857(I)","PLP-872","PLP-871","PLP-875","PLP-874","PLP-873(d)"],"count":16}}},"ECG3_R3":{"dt":184.62,"set":"SET_CG3","alimentador":"ETR CD2 H03","seccionadores":{"ECG3_R3S2":{"dt":184.62,"instalaciones":["PEC-812","PEC-813","PEC-821","PEC.a-830","PEC-831","PEC-817","PEC-820","PEC-835(d)","PEC-829","PEC-837","PEC-836","PEC-838(d)","PEC-840","PEC-842"],"count":14}}},"ECG3_R4":{"dt":70.68,"set":"SET_CG3","alimentador":"ETR CD2 H03","seccionadores":{"ECG3_R4S2":{"dt":44.71,"instalaciones":["L-15","PCD-1088","PCD-1089","PCD-1090","PCD-1106","PCD-1148","PCD-1149","PCD-1155","PCD-1158","PCD-1159","PCD-1206","PCD-1207(d)","PCD-1248(d)","PCD-16","PCD-188","PCD-248","PCD-249","PCD-806(I)","PCD-252","PCD-25","PCD-1274","PCD-1247"],"count":22},"ECG3_R4S3":{"dt":25.97,"instalaciones":["PCD-1003","PCD-1053","PCD-981","PCD-1052","Pcoi-7"],"count":5}}},"ECT2_R3":{"dt":59.97,"set":"SET_CT2","alimentador":"ETR CD2 H18","seccionadores":{"Conectado directamente del reconectador":{"dt":50.93,"instalaciones":["CT-32","CT-47","CT-58","CT-72","PCT-264","PCT-266","PCT-270","PCT-271","PCT-272","PCT-273","PCT-274","PCT-275","PCT-280","PCT-302","PCT-303","PCT-343","PCT-344","PCT-349","PCT-352","PCT-350","PCT-363(d)"],"count":21},"ECT2_R3S1":{"dt":9.04,"instalaciones":["PCT-340","PCT-341","PCT-342","CT-38"],"count":4}}},"ECT2_R4":{"dt":9.45,"set":"SET_CT2","alimentador":"ETR CD2 H18","seccionadores":{"Conectado directamente del reconectador":{"dt":9.45,"instalaciones":["CT-33","CT-61","CT-64","CT-69","CT-71","PCT-205"],"count":6}}},"ECT2_R6":{"dt":37.95,"set":"SET_CT2","alimentador":"ETR CD2 H18","seccionadores":{"ECT2_R6S1":{"dt":30.75,"instalaciones":["CT-13","CT-37","CT-44","PCT-207","PCT-208","PCT-260","PCT-288","PCT-334","PCT-337","PCT-346","PCT-355","PCT-357","PCT-358(d)","PCT-353","PCT-356","PCT-378"],"count":16},"ECT2_R6S2":{"dt":7.2,"instalaciones":["CT-25","CT-49","CT-54","CT-55","PCT-284","PCT-297","PCT-300"],"count":7}}},"ECT2_R8":{"dt":21.16,"set":"SET_CT2","alimentador":"ETR CD2 H18","seccionadores":{"Conectado directamente del reconectador":{"dt":21.16,"instalaciones":["CT-75","CT-77","CT-78","PCT-203","PCT-372(d)","PCT-376","PCT-377"],"count":7}}},"ECT2_RCH":{"dt":57.62,"set":"SET_CT2","alimentador":"ETR CD2 H18","seccionadores":{"Conectado directamente del reconectador":{"dt":7.89,"instalaciones":["PCT-210","PCT-237","PCT-243","PCT-362(d)","PCT-371"],"count":5},"ECT2_RCHS1":{"dt":17.34,"instalaciones":["PCT-200","PCT-215","PCT-223","PCT-226","PCT-227","PCT-229","PCT-238","PCT-255","PCT-276","PCT-291","PCT-335","PCT-98"],"count":12},"ECT2_RCHS2":{"dt":31.03,"instalaciones":["CTN-4","PCT-201","PCT-213","PCT-214","PCT-224","PCT-225","PCT-230","PCT-233","PCT-268","PCT-290","PCT-292","PCT-373(d)"],"count":12},"ECT2_RCHS3":{"dt":1.36,"instalaciones":["PCT-314","PCT-315"],"count":2}}},"ECT2_RCTN":{"dt":33.84,"set":"SET_CT2","alimentador":"ETR CD2 H18","seccionadores":{"ECT2_RCTNS1":{"dt":30.25,"instalaciones":["CT-89","CT-91","CT-92","PCT-202","PCT-212","PCT-221","PCT-222","PCT-267","PCT-277","PCT-295","PCT-296","PCT-320","PCT-317"],"count":13},"ECT2_RCTNS2":{"dt":3.58,"instalaciones":["CT-113","CT-88","PCT-219"],"count":3}}},"EESC_R1":{"dt":276.51,"set":"SET_ESC","alimentador":"ETR OR2 H03","seccionadores":{"EESC_R1S1":{"dt":150.36,"instalaciones":["PE-45","PE-737","PE-807","PE-826","PE-838","PE-841","PE-856","PE-864","PE-869","PE-885","PE-889","PE-891","PE-896","PE-897","PE-898","PE-922","PO-911","PE-1050","PE-1049","PE-1047(d)","PE-1052(d)","PE-1053(d)","PO-1288(d)","PE-908","PE-907","PE-900","PE-902"],"count":27},"EESC_R1S2":{"dt":91.35,"instalaciones":["PE-801","PE-844","PE-857","PE-887","PE-915","PE-905","PE-919","PE-904","PE-917","PE-920"],"count":10},"EESC_R1S3":{"dt":34.8,"instalaciones":["PE-704","PE-710","PE-808","PE-812","PE-827","PE-842","PE-886","PE-909","PE-945"],"count":9}}},"EESC_R2":{"dt":229.37,"set":"SET_ESC","alimentador":"ETR OR2 H03","seccionadores":{"EESC_R2S1":{"dt":15.02,"instalaciones":["PE-13","PE-723","PE-809","PE-814","PE-867","PE-899"],"count":6},"EESC_R2S2":{"dt":17.76,"instalaciones":["PE-730","PE-8","PE-824","PE-834","PE-835","PE-868"],"count":6},"EESC_R2S3":{"dt":7.09,"instalaciones":["PE-12","PE-16","PE-17","PE-7"],"count":4},"EESC_R2S4":{"dt":189.5,"instalaciones":["PE.a-895","PE-30","PE-42","PE-716","PE-819","PE-845","PE-859","PE-860","PE-861","PE-877","PE-936","PE-937","PE-938","PE-978","PE-980","PE-983","PE-954","PE-955","PE-1129","PE-1134","PE-1039","PE-1128","PE-1135","PE-1141(d)","PE-1142","PE-1140(d)","PE-1143"],"count":27}}},"EESC_R4":{"dt":214.37,"set":"SET_ESC","alimentador":"ETR OR2 H03","seccionadores":{"EESC_R4S1":{"dt":80.8,"instalaciones":["PE-729","PE-810","PE-830","PE-831","PE-862","PE-863","PE-873","PE-982","PE-931","PE-1093"],"count":10},"EESC_R4S2":{"dt":103.16,"instalaciones":["PE-701","PE-714","PE-733","PE-803","PE-806","PE-813","PE-820","PE-1009","PE-1007","PE-1127","PE-1010","PE-1012","PE-1137","PE-876"],"count":14},"EESC_R4S3":{"dt":30.42,"instalaciones":["PE-709","PE-717","PE-726","PE-727","PE-741","PE-802","PE-821","PE-871","PE-874","PE-883"],"count":10}}},"EESC_R6":{"dt":325.31,"set":"SET_ESC","alimentador":"ETR OR2 H03","seccionadores":{"EESC_R6S1":{"dt":10.41,"instalaciones":["PE-22","PE-715","PE-721","PE-815","PE-825","PE-833"],"count":6},"EESC_R6S2":{"dt":287.89,"instalaciones":["PE.a-894","PE.a-933","PE.a-934","PE-1001","PE-1004","PE-1015","PE-1017","PE-1019","PE-1024","PE-1027","PE-1028","PE-1030","PE-2","PE-706","PE-712","PE-832","PE-846","PE-892","PE-929","PE-935","PE-994","PMCCh.x-1001","PE-998","PE-997","PE-1002","PE-996","PE-1000","PE-1021","PE-999(I)","PMCCh.x-1002","PE-1058","PE-1132","PE-1138","PE-1151"],"count":34},"EESC_R6S3":{"dt":27.01,"instalaciones":["PE-1040","PE-40","PE-46","PE-6","PE-713","PE-725","PE-836"],"count":7}}},"ELFL_R1":{"dt":94.47,"set":"SET_VH3","alimentador":"ETR VH2 H02","seccionadores":{"ELFL_R1S1":{"dt":23.55,"instalaciones":["PVH-1024","PVH-1111","PVH-1115","PVH-1119","PVH-1145","PVH-1163","PVH-1170","PVH-1172","PVH-1242","PVH-1305","PVH-923","PVH-994"],"count":12},"ELFL_R1S2":{"dt":23.02,"instalaciones":["PVH-1019","PVH-1023","PVH-1082","PVH-1110","PVH-1137","PVH-1186","PVH-1202","PVH-1203","PVH-1271","PVH-1272","PVH-1304","PVH-916","PVH-917"],"count":13},"ELFL_R1S3":{"dt":47.9,"instalaciones":["PVH-1069","PVH-1113","PVH-1147","PVH-1241","PVH-1248","PVH-1249","PVH-1253","PVH-1265","PVH-1266","PVH-1308","PVH-1309","PVH-1575","PVH-621","PVH-701","PVH-853","PVH-886","PVH-1168"],"count":17}}},"ELFL_R2":{"dt":110.33,"set":"SET_LFL","alimentador":"ETR VH2 H09","seccionadores":{"ELFL_R2S1":{"dt":50.2,"instalaciones":["PRCh-1033","PRCh-1034","PRCh-1038","PRCh-1060","PRCh-1062","PVH-1193","PVH-1195","PVH-1220","PVH-1221","PVH-1230","PVH-1231","PVH-1239","PVH-1245","PVH-1260","PVH-1261","PVH-1294","PVH-1401"],"count":17},"ELFL_R2S4":{"dt":60.13,"instalaciones":["PRCh-1036","PRCh-1036(I)","PRCh-1039","PRCh-1040","PRCh-1044","PRCh-1045","PRCh-1046","PRCh-1049","PRCh-1050","PRCh-1052","PRCh-1053","PRCh-1054","PRCh-1056","PRCh-1061","PRCh-1065","PRCh-1066","PRCh-1070","PRCh-1076"],"count":18}}},"ELFL_R3":{"dt":28.91,"set":"SET_LFL","alimentador":"ETR VH2 H09","seccionadores":{"ELFL_R3S1":{"dt":22.59,"instalaciones":["PVH-1060","PVH-1061b","PVH-1097","PVH-1106","PVH-1107","PVH-1255","PVH-1256","PVH-1274","PVH-1275","PVH-822","PVH-947","PVH-948","VH-38","VH-47"],"count":14},"ELFL_R3S2":{"dt":6.32,"instalaciones":["PVH-1175","PVH-1258","PVH-1295","VH-44"],"count":4}}},"ELFL_R4":{"dt":290.16,"set":"SET_LFL","alimentador":"ETR VH2 H09","seccionadores":{"ELFL_R4S1":{"dt":130.23,"instalaciones":["PHur.xp-1000","PHur-1002","PRCh.xp-1000","PRCh-1001","PRCh-1002","PRCh-1003","PRCh-1005","PRCh-1009","PRCh-1010","PRCh-1011","PRCh-1012","PRCh-1015","PRCh-1016","PRCh-1017","PRCh-1018","PRCh-1019","PRCh-1021","PRCh-1024","PRCh-1025","PRCh-1027","PRCh-1028","PRCh-1029","PRCh-1032","PRCh-1035","PRCh-1058","PRCh-1059","PRCh-1068","PRCh-1069","RCH-4","PHur-1015","PHur-1013","PHur-1014"],"count":32},"ELFL_R4S2":{"dt":124.74,"instalaciones":["LF-27","PHur-1005","PRCh-1071","PRCh-1072","PRCh-1073","PRCh-1074","PRCh-1084","PRCh-1086","PRCh-1089","PRCh-1090","PRCh-1092","PRCh-1095","PRCh-1096","PRCh-1097","PRCh-1099","PRCh-1102","PRCh-1098","PRCh-1088","PRCh-1115","PRCh-1117","PHur-1003","PRCh-1126","PRCh-1113","PRCh-1114","PRCh-1119","PRCh-1112","PRCh-1116","PRCh-1125","PRCh-1123","PRCh-1122","PRCh-1120","PRCh-1124"],"count":32},"ELFL_R4S3":{"dt":27.75,"instalaciones":["PRCh-1105","PRCh-1104","PHur-1006","PHur-1011","PHur-1008","PHur-1010","PRCh-1136"],"count":7},"ELFL_R4S4":{"dt":7.43,"instalaciones":["PRCh.xp-1087","PRCh-1082"],"count":2}}},"ELMS3_R2":{"dt":33.63,"set":"SET_LMS3","alimentador":"ETR RE2 H19","seccionadores":{"ELMS_R1S3":{"dt":6.65,"instalaciones":["PR-839","PR-840","PR-842"],"count":3},"ELMS_R1S4":{"dt":16.67,"instalaciones":["PR-854","PR-859","PR-861","PR-862","PR-863","PR-882","PR-898"],"count":7},"ELMS_R1S5":{"dt":10.0,"instalaciones":["PR-1027","PR-853","PR-856","PR-872","PR-930"],"count":5},"ELMS_R1S6":{"dt":0.3,"instalaciones":["PR-988"],"count":1}}},"ELMS3_R3":{"dt":14.17,"set":"SET_LMS3","alimentador":"ETR RE2 H19","seccionadores":{"Conectado directamente del reconectador":{"dt":0.28,"instalaciones":["PR-858"],"count":1},"ELMS3_R3S1":{"dt":13.89,"instalaciones":["PR-1104","PR-824","PR-836","PR-843","PR-848","PR-852","PR-857","PR-865","PR-869","PR-881"],"count":10}}},"ELMS3_R4":{"dt":42.59,"set":"SET_LMS3","alimentador":"ETR RE2 H19","seccionadores":{"ELMS3_R4S1":{"dt":11.2,"instalaciones":["PLMS-12","PLMS-702","PLMS-806","PLMS-855","PLMS-887","PLMS-913"],"count":6},"ELMS3_R4S2":{"dt":20.38,"instalaciones":["PLMS-7","PLMS-811","PLMS-812","PLMS-826","PLMS-827","PLMS-831","PLMS-833","PLMS-853","PLMS-869"],"count":9},"ELMS3_R4S3":{"dt":11.01,"instalaciones":["PLMS-915","PLMS-916","PLMS-917","PLMS-946","PLMS-953","PLMS-957"],"count":6}}},"ELMS3_R5":{"dt":108.3,"set":"SET_LMS3","alimentador":"ETR RE2 H19","seccionadores":{"Conectado directamente del reconectador":{"dt":108.3,"instalaciones":["LN-3","PCH-815","PCH-817","PCH-821","PJ-2","PJ-3","PJ-801","PJ-802","PJ-804","PJ-808","PJ-809","PJ-810","PJ-811","PJ-813","PJ-814","PJ-819","PJ-820","PJ-821","PJ-823","PJ-829","PJ-838","PJ-849","PJ-855","PJ-851","PCH-834","PCH-833","PJ-889","PJ-890","PCH-839(d)","PCH-845(d)","PCH-848(d)","PCH-840(d)","PCH-816(d)","PCH-847","PCH-856(d)","PCH-855(d)"],"count":36}}},"ELMS3_R6":{"dt":70.73,"set":"SET_LMS3","alimentador":"ETR RE2 H19","seccionadores":{"ELMS3_R6S1":{"dt":38.06,"instalaciones":["PR-1153(d)","PR-1230","PR-1243(d)","PR-1244(d)"],"count":4},"ELMS3_R6S2":{"dt":32.67,"instalaciones":["PR-1154(d)","PR-1245","PR-1250","PR-1252","PR-1251"],"count":5}}},"ELMS_R1":{"dt":128.54,"set":"SET_LMS3","alimentador":"ETR RE2 H19","seccionadores":{"ELMS_R1S1":{"dt":29.47,"instalaciones":["PLMS.a-928","PR-1029","PR-1054","PR-1158","PR-1177(d)","PR-1179","PR-1180","PR-13","PR-6","PR-707","PR-708","PR-709","PR-807","PR-822","PR-833"],"count":15},"ELMS_R1S2":{"dt":82.26,"instalaciones":["PR-1051","PR-1052","PR-1055","PR-1060","PR-1063","PR-1127","PR-1128","PR-1129","PR-1130","PR-1203","PR-1211","PR-701","PR-811","PR-885","PR-1208","PR-1246","PR-1247","PR-1248"],"count":18},"ELMS_R1S8":{"dt":16.81,"instalaciones":["PR-1000","PR-1002","PR-1023","PR-1078","PR-38","PR-826","PR-928","PR-997"],"count":8}}},"ELMS_R2":{"dt":109.84,"set":"SET_LMS3","alimentador":"ETR RE2 H19","seccionadores":{"Conectado directamente del reconectador":{"dt":3.1,"instalaciones":["LS-1","PLMS-873"],"count":2},"ELMS_R2S1":{"dt":25.37,"instalaciones":["PLMS-875","PLMS-876","PLMS-879","PLMS-880","PLMS-934","PLMS-936","PLMS-937","PCH-831","PJ-839"],"count":9},"ELMS_R2S2":{"dt":9.77,"instalaciones":["PLMS-846","PLMS-850","PLMS-867","PLMS-929","PLMS-943","PLMS-973"],"count":6},"ELMS_R2S3":{"dt":14.24,"instalaciones":["PLMS-864","PLMS-868","PLMS-884","PLMS-918","PLMS-932","PLMS-977"],"count":6},"ELMS_R2S4":{"dt":57.35,"instalaciones":["PLMS-20","PLMS-21","PLMS-801","PLMS-805","PLMS-832b","PLMS-839","PLMS-840","PLMS-843","PLMS-844","PLMS-849","PLMS-860","PLMS-865","PLMS-872","PLMS-882","PLMS-883","PLMS-885","PLMS-1049","PLMS-1056","PLMS-1055"],"count":19}}},"ELMS_R3":{"dt":31.55,"set":"SET_LMS3","alimentador":"ETR RE2 H19","seccionadores":{"ELMS_R3S2":{"dt":24.26,"instalaciones":["PR-1089","PR-1093","PR-8","PR-806","PR-817","PR-819","PR-823","PR-883","PR-884","PR-9","PR-902","PR-911"],"count":12},"ELMS_R3S3":{"dt":7.29,"instalaciones":["PR-1098","PR-809","PR-812","PR-832","PR-910"],"count":5}}},"ELMS_R4":{"dt":71.47,"set":"SET_RE1","alimentador":"ETR CD2 H19","seccionadores":{"ELMS_R4S1":{"dt":10.09,"instalaciones":["PR-1011","PR-1046","PR-32","PR-940","PR-942","PR-958"],"count":6},"ELMS_R4S3":{"dt":54.91,"instalaciones":["PR.xp-1066","PR-1001","PR-1005","PR-1009","PR-1010","PR-1024(I)","PR-1047","PR-1058","PR-1219","PR-1221","PR-1222","PR-1224","PR-1225","PR-39","PR-41","PR-43","PR-46","PR-813","PR-913","PR-936","PR-974","PR-978","PR-996b"],"count":23},"ELMS_R4S5":{"dt":6.47,"instalaciones":["PCG-829","PR-801","PR-981","PR-982"],"count":4}}},"ELMS_R5":{"dt":98.96,"set":"SET_LMS","alimentador":"ETR ZR2 H03","seccionadores":{"ELMS_R5S1":{"dt":58.14,"instalaciones":["PLM-821","PLM-830","PLM-867","PLM-868","PLM-881","PLM-892(d)","PLM-909","PLMS-854","PLMS-921","PLMS-922","PR-1008","PR-1136(d)","PR-1139","PR-1140","PR-1143","PR-1146","PR-967"],"count":17},"ELMS_R5S2":{"dt":40.82,"instalaciones":["PLM-855","PLM-865","PLM-889","PLMS-19","PLMS-816","PLMS-817","PLMS-834","PLMS-891","PLMS-893","PLMS-908","PLMS-909","PLMS-923","PLMS-925","PLMS-926","PLMS-983","PZ-1495(d)"],"count":16}}},"ELMS_R6":{"dt":110.14,"set":"SET_LMS","alimentador":"ETR ZR2 H03","seccionadores":{"ELMS_R6S1":{"dt":85.65,"instalaciones":["PLMS-701","PLMS-704","PLMS-815","PLMS-835","PLMS-836","PLMS-841","PLMS-890","PLMS-919","PLMS-945","PLMS-947","PLMS-955","PLMS-967","PLMS-969(d)","PZ.a-1220","PZ-1266","PZ-128","PZ-1290","PZ-1464(d)","PZ-801","PZ-817","PCH-859(d)","PLMS-1058","PLMS-1060"],"count":23},"ELMS_R6S2":{"dt":24.49,"instalaciones":["PLMS-14","PLMS-706","PLMS-966(d)","PLMS-968(d)","PLMS-991"],"count":5}}},"EMSC_R1":{"dt":41.08,"set":"SET_MSC","alimentador":"ETR OR2 H11","seccionadores":{"EMSC_R1S1":{"dt":2.92,"instalaciones":["PMC-1041","PMC-822","PMC-823","PMC-958"],"count":4},"EMSC_R1S2":{"dt":11.79,"instalaciones":["PMC-1027","PMC-1038","PMC-1040","PMC-816","PMC-818","PMC-952","PMC-1060"],"count":7},"EMSC_R1S3":{"dt":26.36,"instalaciones":["PMC-1023","PMC-1024","PMC-1026","PMC-22","PMC-45","PMC-50","PMC-804","PMC-805","PMC-812","PMC-870","PMC-949"],"count":11}}},"EMSC_R2":{"dt":50.6,"set":"SET_MSC","alimentador":"ETR OR2 H11","seccionadores":{"EMSC_R2S1":{"dt":10.49,"instalaciones":["PMC-836","PMC-869","PMC-899","PMC-904","PMC-937","PMC-1062"],"count":6},"EMSC_R2S2":{"dt":8.61,"instalaciones":["PMC-1033","PMC-29","PMC-982","PMC-984"],"count":4},"EMSC_R2S3":{"dt":5.06,"instalaciones":["PMC-1046","PMC-1047","PMC-837","PMC-986"],"count":4},"EMSC_R2S4":{"dt":23.73,"instalaciones":["PMC-18","PMC-868","PMC-897","PMC-901","PMC-903","PMC-1064","PMC-1070","PMC-1071"],"count":8},"EMSC_R2S5":{"dt":2.71,"instalaciones":["PMC-1049","PMC-701","PMC-8"],"count":3}}},"EMSC_R3":{"dt":71.11,"set":"SET_MSC","alimentador":"ETR OR2 H11","seccionadores":{"EMSC_R3S1":{"dt":5.28,"instalaciones":["PMC-811","PMC-832","PMC-879","PMC-886","PMC-887","PMC-992"],"count":6},"EMSC_R3S2":{"dt":3.8,"instalaciones":["PMC-46","PMC-814","PMC-834","PMC-936","PMC-981","PMC-985"],"count":6},"EMSC_R3S3":{"dt":57.0,"instalaciones":["PMC-1059","PMC-1061","PMC-12","PMC-703","PMC-835","PMC-864","PMC-893","PMC-895","PMC-939","PMC-1065","PMC-1066","PMC-1072","PMC-1073"],"count":13},"EMSC_R3S4":{"dt":5.03,"instalaciones":["PMC-833","PMC-889","PMC-890","PMC-906"],"count":4}}},"EMSC_R4":{"dt":14.02,"set":"SET_MSC","alimentador":"ETR OR2 H11","seccionadores":{"EMSC_R4S1":{"dt":4.38,"instalaciones":["PMC-808","PMC-815","PMC-830"],"count":3},"EMSC_R4S2":{"dt":2.92,"instalaciones":["PMC-23","PMC-63","PMC-810","PMC-852"],"count":4},"EMSC_R4S3":{"dt":4.14,"instalaciones":["PMC-855","PMC-858","PMC-877","PMC-880"],"count":4},"EMSC_R4S4":{"dt":2.57,"instalaciones":["PMC-831","PMC-883","PMC-989","PMC-990"],"count":4}}},"EMSC_R5":{"dt":25.58,"set":"SET_MSC","alimentador":"ETR OR2 H11","seccionadores":{"EMSC_R5S1":{"dt":8.45,"instalaciones":["PMC-1015","PMC-66","PMC-71","PMC-846","PMC-848","PMC-999"],"count":6},"EMSC_R5S2":{"dt":7.81,"instalaciones":["PMC-1007","PMC-1018","PMC-1056","PMC-51","PMC-65","PMC-69","PMC-844"],"count":7},"EMSC_R5S3":{"dt":8.2,"instalaciones":["PMC-1002","PMC-1003","PMC-1009","PMC-1011","PMC-1030"],"count":5},"EMSC_R5S6":{"dt":1.12,"instalaciones":["PMC-1043"],"count":1}}},"EMSC_R6":{"dt":15.28,"set":"SET_MSC","alimentador":"ETR OR2 H11","seccionadores":{"EMSC_R6S1":{"dt":9.29,"instalaciones":["PMC-1006","PMC-1012","PMC-851","PMC-871","PMC-908","PMC-909"],"count":6},"EMSC_R6S2":{"dt":5.59,"instalaciones":["PMC-1013","PMC-60","PMC-840","PMC-850","PMC-997","PMC-998"],"count":6},"EMSC_R6S3":{"dt":0.41,"instalaciones":["PMC-907"],"count":1}}},"EOR1_R1":{"dt":151.46,"set":"SET_OR1","alimentador":"ETR OR2 H13","seccionadores":{"EOR1_R1S1":{"dt":14.62,"instalaciones":["PO-10","PO-1210","PO-26","PO-27","PO-975"],"count":5},"EOR1_R1S2":{"dt":35.51,"instalaciones":["PO-1003","PO-1052","PO-1057","PO-30","PO-33","PO-34","PO-35","PO-847","PO-858","PO-890","PO-902","PO-908","PO-912","PO-913","PO-915","PO-931","PO-932","PO-933","PO-939","PO-971","PO-972","PO-974","PO-986"],"count":23},"EOR1_R1S3":{"dt":101.33,"instalaciones":["PO-1018","PO-1061","PO-14","PO-810","PO-811","PO-813","PO-818","PO-821","PO-830","PO-831","PO-900","PO-901","PO-963","PE-870","PE-1069","PE-1077","PE-1067","PE-1155","PE-1154(d)","PE-1070"],"count":20}}},"EOR1_R2":{"dt":221.02,"set":"SET_OR1","alimentador":"ETR OR2 H13","seccionadores":{"EOR1_R2S1":{"dt":20.32,"instalaciones":["PO-1055","PO-1059","PO-1097","PO-1149","PO-1174","PO-863","PO-950","PO-977"],"count":8},"EOR1_R2S2":{"dt":24.02,"instalaciones":["PO-1012","PO-1029","PO-1034","PO-1035","PO-1036","PO-1280","PO-864","PO-865","PO-879","PO-919","PO-920","PO-954","PO-983","PO-984","PO-1043"],"count":15},"EOR1_R2S3":{"dt":176.68,"instalaciones":["PO-1016","PO-1028","PO-1033","PO-1050","PO-1095","PO-1099","PO-1100","PO-1219","PO-1207","PO-1208","PO-1209","PO-1272","PO-1279","PO-857","PO-860","PO-930","PO-955","PO-988","PO-990","PO-1303","PO-1321","PO-1334","PO-1331","PO-1316","PO-1317","PO-1332","PO-1319","PO-1322","PO-1312","PO-1310","PO-1301"],"count":31}}},"EOR1_R3":{"dt":135.33,"set":"SET_OR1","alimentador":"ETR OR2 H13","seccionadores":{"EOR1_R3S1":{"dt":16.92,"instalaciones":["PO-1025(I)","PO-1069","PO-1070","PO-1090","PO-707","PO-709","PO-710","PO-711"],"count":8},"EOR1_R3S3":{"dt":118.41,"instalaciones":["PE.a-930","PE-865","PO-1066","PO-25","PO-715","PO-817","PO-846","PO-888","PE-1055","PO-1291","PE-1084","PE-1072","PE-1056","PE-1075","PE-1073","PO-1292","PO-1296","PO-1286","PO-1287","PO-1290"],"count":20}}},"EOR1_R4":{"dt":134.7,"set":"SET_ESC","alimentador":"ETR OR2 H03","seccionadores":{"EOR1_R4S1":{"dt":24.97,"instalaciones":["PE-979","PO-1013","PO-1091","PO-712","PO-809","PO-827","PO-828","PO-839","PO-841","PO-842","PO-905","PO-964"],"count":12},"EOR1_R4S2":{"dt":15.07,"instalaciones":["PO-714","PO-806","PO-816","PO-838","PO-9","PO-985"],"count":6},"EOR1_R4S3":{"dt":94.67,"instalaciones":["PO-1007","PO-1017","PO-1026","PO-1060(d)","PO-15","PO-3","PO-703","PO-704","PO-713","PO-804","PO-812","PO-850","PO-962","PO-996","PO-997","PO-1308","PO-1309","PO-1304","PO-1314","PO-1307"],"count":20}}},"EOR1_R5":{"dt":76.86,"set":"SET_ESC","alimentador":"ETR OR2 H03","seccionadores":{"EOR1_R5S1":{"dt":11.29,"instalaciones":["PO-848","PO-849","PO-899","PO-928","PO-929","PO-13"],"count":6},"EOR1_R5S2":{"dt":40.11,"instalaciones":["PO-1000","PO-1002","PO-1074","PO-829","PO-832","PO-834","PO-840","POO-807","POO-808","POO-811","POO-812","POO-813","POO-820","POO-825","POO-829","POO-830","POO-832","POO-834"],"count":18},"EOR1_R5S3":{"dt":25.47,"instalaciones":["PO-1077","PO-1078","POO-802","POO-803","POO-804","POO-806","POO-815","POO-816","POO-818","POO-822","POO-824","POO-826","POO-836","POO-839","POO-846(d)","POO-847","POO-841"],"count":17}}},"EOR1_R6":{"dt":23.16,"set":"SET_OR1","alimentador":"ETR OR2 H13","seccionadores":{"EOR1_R6S1":{"dt":7.47,"instalaciones":["PO-866","PO-873","PO-874","PO-881","PO-883","PO-884","PO-886"],"count":7},"EOR1_R6S2":{"dt":15.69,"instalaciones":["PO-1024","PO-867","PO-869","PO-870","PO-872","PO-885","PO-887","PO-889","PO-894","PO-895","PO-921","PO-941"],"count":12}}},"EOR1_R7":{"dt":68.27,"set":"SET_OR1","alimentador":"ETR OR2 H13","seccionadores":{"EOR1_R7S1":{"dt":26.57,"instalaciones":["PO-1081","PO-982","PZ-1191","PZ-1192","PZ-704","PZ-705","PZ-839","PZ-869","PZ-973","PO-923"],"count":10},"EOR1_R7S2":{"dt":6.55,"instalaciones":["PO-891","PO-893","PO-922","PZ-1188","PZ-1213","PZ-719","PZ-849","PZ-972"],"count":8},"EOR1_R7S3":{"dt":35.16,"instalaciones":["PO-1004","PO-1047","PO-1048","PO-1079","PO-948","PO-961","PO-967","PO-968","PO-991"],"count":9}}},"EOR1_R8":{"dt":74.92,"set":"SET_OR1","alimentador":"ETR OR2 H13","seccionadores":{"EOR1_R8S1":{"dt":74.92,"instalaciones":["PO-1001","PO-1014","PO-1080","PO-1096","PO-1101","PO-1102","PO-1103","PO-1104","PO-1151","PO-1153","PO-1175","PO-907","PO-934","PO-944","PO-945","PO-956","PO-969","PO-970","PO-973","PO-979","PO-981"],"count":21}}},"EOR3_R1":{"dt":64.24,"set":"SET_OR3","alimentador":"ETR OR2 H04","seccionadores":{"EOR3_R1S1":{"dt":37.75,"instalaciones":["PO-1006","PO-1019","PO-1065","PO-1092","PO-1093","PO-833","PO-909","PO-926","PO-987","PO-1094","PO-1349"],"count":11},"EOR3_R1S2":{"dt":26.49,"instalaciones":["PO-1027","PO-1032","PO-19","PO-705","PO-803","PO-819","PO-851","PO-916","PO-917"],"count":9}}},"EOR3_R2":{"dt":100.08,"set":"SET_OR3","alimentador":"ETR OR2 H04","seccionadores":{"EOR3_R2S1":{"dt":79.3,"instalaciones":["PO-1165","PO-1194","PO-1196","PO-1197","PO-1216","PO-1217","PO-1227","PO-1229","PO-1230","PO-1231","PO-1242","PO-1243","PO-1244","PO-1246","PZ-1455","PZ-1456","PZ-1523","PZ-1528","PO-1248","PO-1268","PO-1267"],"count":21},"EOR3_R2S2":{"dt":20.78,"instalaciones":["PO-1235","PO-1236","PO-1237","PZ-1576","PZ-1577","PZ-1630"],"count":6}}},"EOR3_R3":{"dt":51.21,"set":"SET_ZR7","alimentador":"ETR ZR2 H21","seccionadores":{"EOR3_R3S1":{"dt":40.1,"instalaciones":["PZ.a-1395","PZ-1394","PZ-1452","PZ-1521","PZ-1522","PZ-1524","PZ-1525","PZ-1526","PZ-1529","PZ-1597","PZ-1596","PZ-1598"],"count":12},"EOR3_R3S2":{"dt":11.12,"instalaciones":["PZ-1444","PZ-1445","PZ-1446","PZ-1448","PZ-1449","PZ-1450","PZ-1475","PZ-1505","PZ-1520"],"count":9}}},"EOR3_R4":{"dt":123.08,"set":"SET_OR3","alimentador":"ETR OR2 H04","seccionadores":{"EOR3_R4S1":{"dt":23.3,"instalaciones":["PO-1166","PO-1183","PO-1185","PO-1225(d)","PO-1226","PO-1250","PO-1251","PO-1253"],"count":8},"EOR3_R4S2":{"dt":46.74,"instalaciones":["PO.a-1164","PO-1167","PO-1212","PO-1257","PO-1259","PO-1264","PO-1256","PO-1263","PO-1260","PO-1323"],"count":10},"EOR3_R4S3":{"dt":53.04,"instalaciones":["PO-1335","PO-1340","PO-1261","PO-1337","PO-1362","PO-1338","PO-1361(d)","PO-1339"],"count":8}}},"EOR3_R5":{"dt":36.51,"set":"SET_OR3","alimentador":"ETR OR2 H04","seccionadores":{"EOR3_R5S1":{"dt":13.17,"instalaciones":["PO-1202","PO-1204","PO-1205","PO-1206","PO-1220","PO-1223","PO-1222"],"count":7},"EOR3_R5S2":{"dt":23.34,"instalaciones":["PO-1114","PO-1143","PO-1145","PO-1146","PO-1154","PO-1176","PO-1180","PO-1181","PO-1182","PO-1201","PO-1083","PO-1087(I)"],"count":12}}},"EOR3_R6":{"dt":143.3,"set":"SET_OR3","alimentador":"ETR OR2 H04","seccionadores":{"EOR3_R6S1":{"dt":14.07,"instalaciones":["PO-1233","PZ-1527","PZ-1530","PZ-1531","PZ-1532"],"count":5},"EOR3_R6S2":{"dt":129.23,"instalaciones":["PZ-1632","PZ-1578","PZ-1599","PZ-1600","PZ-1633","PZ-1629","PZ-1634","PZ-1637","PZ-1640","PZ-1635","PZ-1636","PZ-1705","PZ-1704","PZ-1628","PZ-1706","PZ-1707","PZ-1708(d)","PZ-1711"],"count":18}}},"EPAM_R1":{"dt":270.33,"set":"SET_PAM","alimentador":"ETR CD2 H20","seccionadores":{"EPAM_R1S1":{"dt":115.05,"instalaciones":["PET-11","PET-14","PET-15","PET-16","PET-801","PET-803","PET-811","PET-830","PET-836","PET-837","PET-853","PET-810","PET-867","PET-868","PET-818","PET-852","PET-822","PET-841(d)"],"count":18},"EPAM_R1S2":{"dt":72.68,"instalaciones":["PET-34","PET-4","PET-43","PET-805","PET-828","PET-829","PET-838","PET-857(d)","PET-859(d)","PET-855(d)(I)","PET-816","PET-815"],"count":12},"EPAM_R1S3":{"dt":82.6,"instalaciones":["PEN-805","PET-32","PET-41","PET-42","PET-7","PET-813","PET-826","PET-832","PET-833","PET-850","PET-861(d)","PET-862","PET-858(d)","PET-806"],"count":14}}},"EPAM_R2":{"dt":254.85,"set":"SET_PAM","alimentador":"ETR CD2 H20","seccionadores":{"EPAM_R2S1":{"dt":1.12,"instalaciones":["PP-812"],"count":1},"EPAM_R2S4":{"dt":3.88,"instalaciones":["PP-12","PP-834"],"count":2},"EPAM_R2S7":{"dt":249.84,"instalaciones":["PEC-804","PEC-807","PEC-808","PEN-803","PEN-804","PP-10","PP-8","PP-811","PSA-3","PSA-802","PSA-803","PEC-810(d)","PEC-814","PEC-818","PEC-827","PEC-816","PEC-819","PEN-806","PEC-809","PEC-825","PEN-808","PEC-822","PSA.a-806","PEC-834","PEN-807","PSA-814","PSA-813","PSA-807","PEC-833","PSA-810","PSA-808","PSA-809","PSA-811","PSA-812","PSA-819","PSA-823"],"count":36}}},"EPAM_R3":{"dt":69.45,"set":"SET_PAM","alimentador":"ETR CD2 H20","seccionadores":{"EPAM_R3S1":{"dt":44.26,"instalaciones":["PP-817","PP-821","PP-835","PP-836","PP-837","PP-838","PP-839","PSA-824","PSA-825"],"count":9},"EPAM_R3S2":{"dt":25.19,"instalaciones":["PP-14","PP-5","PP-7","PP-815","PP-818","PP-822","PP-823","PP-829","PP-830"],"count":9}}},"EPAM_R4":{"dt":159.61,"set":"SET_PAM","alimentador":"ETR CD2 H20","seccionadores":{"EPAM_R4S2":{"dt":159.61,"instalaciones":["PM-3","PM-801","PM-802(d)","PM-804","PM-805","PM-806","PM-807","PM-809","PM-810","PM-812","PM-813","PM-814","PM-815","PM-816","PM-817","PM-818","PM-821","PM-820(d)","PM-819","PM-824","PM-826"],"count":21}}},"ERE1_R2":{"dt":34.5,"set":"SET_RE1","alimentador":"ETR CD2 H19","seccionadores":{"Conectado directamente del reconectador":{"dt":0.86,"instalaciones":["PCG-1106"],"count":1},"ERE1_R2S1":{"dt":22.18,"instalaciones":["PCG-1079","PCG-1080","PCG-1095","PCG-1096","PCG-1097","PCG-1098","PCG-1147","PR.a-1074","PR-1107","PR-1109","PR-1110","PR-1111","PR-1117","PR-1124","PR-1125","PR-1170(d)","PR-1183"],"count":17},"ERE1_R2S2":{"dt":9.78,"instalaciones":["PCG-1042","PCG-1105","PCG-1118","PCG-1123","PCG-1125","PCG-1136","PCG-1148","PCG-1152","PCG-1169","PCG-1171"],"count":10},"ERE1_R2S3":{"dt":1.69,"instalaciones":["PCG-923","PCG-933"],"count":2}}},"EVH1_R1":{"dt":121.11,"set":"SET_VH3","alimentador":"ETR VH2 H02","seccionadores":{"EVH1_R1S1":{"dt":31.95,"instalaciones":["PVH-1005","PVH-1018","PVH-1135","PVH-1185","PVH-1232","PVH-1290","PVH-1291","PVH-1423(d)","PVH-943","PVH-990","PVH-991"],"count":11},"EVH1_R1S2":{"dt":12.37,"instalaciones":["PVH-1059","PVH-866","PVH-871","PVH-873","PVH-890","PVH-891","PVH-892","PVH-915","PVH-918","PVH-933","PVH-945","PVH-974"],"count":12},"EVH1_R1S3":{"dt":76.79,"instalaciones":["PVH-1011","PVH-1013","PVH-1038","PVH-1081","PVH-1112","PVH-1134","PVH-1142","PVH-1167","PVH-1176","PVH-1307","PVH-1409","PVH-1410","PVH-1425","PVH-1427","PVH-1476","PVH-1477","PVH-1479","PVH-1526","PVH-1527","PVH-1572","PVH-1573","PVH-702","PVH-824","PVH-865","PVH-868","PVH-869","PVH-880","PVH-882","PVH-883","PVH-905","PVH-995","VH-3","VH-55","VH-97","VH-27"],"count":35}}},"EVH1_R10":{"dt":36.85,"set":"SET_VH1","alimentador":"ETR VH2 H11","seccionadores":{"EVH1_R10S1":{"dt":7.63,"instalaciones":["PVH-1051","PVH-1091","PVH-1276","PVH-1277","PVH-1392(I)"],"count":5},"EVH1_R10S2":{"dt":29.22,"instalaciones":["PVH-1124","PVH-1345(I)","PVH-1506","PVH-854","PVH-909","PVH-970","PVH-1569(d)","PVH-1570(d)","PVH-1571(d)"],"count":9}}},"EVH1_R11":{"dt":17.47,"set":"SET_VH1","alimentador":"ETR VH2 H11","seccionadores":{"EVH1_R11S1":{"dt":17.47,"instalaciones":["PCD.a-1055","PCD-1062","PCD-1063","PVH.xp-1302","PVH-1105","PVH-1151","PVH-1372","PVH-623","PVH-803","PVH-807","PVH-993","VH-221"],"count":12}}},"EVH1_R12":{"dt":84.86,"set":"SET_VH1","alimentador":"ETR VH2 H11","seccionadores":{"EVH1_R12S1":{"dt":6.58,"instalaciones":["PVH-1002","PVH-932","PVH-935","PVH-940","PVH-973","PVH-981","VH-35"],"count":7},"EVH1_R12S2":{"dt":9.05,"instalaciones":["PVH-1000","PVH-1001","PVH-1209","PVH-1212","PVH-1214","PVH-1333","PVH-1339","PVH-1347","VH-370","VH-76","PVH-1331"],"count":11},"EVH1_R12S3":{"dt":69.23,"instalaciones":["PVH.xp-1293","PVH-1207","PVH-1226","PVH-1273","PVH-1284","PVH-1285","PVH-1286","PVH-1299","PVH-1332","PVH-1338","PVH-1340","PVH-1359","PVH-1393","PVH-1394","PVH-1395","PVH-1446","PVH-1456","PVH-1458","PVH-1459","PVH-1460","PVH-1463","PVH-1471","PVH-1494","PVH-1495","PVH-1496","PVH-1509","PVH-1510","PVH-1513","PVH-1514(I)","PVH-1518","PVH-1519","PVH-1520","PVH-1521","PVH-1525","PVH-1549","PVH-1550","PVH-1557","PVH-1564","PVH-893","PVH-902","PVH-911","PVH-964","PVH-971","PVH-972","PVH-984","PVH-985","PVH-986","VH-60","VH-8","PVH-1583","PVH-1594"],"count":51}}},"EVH1_R13":{"dt":145.82,"set":"SET_VH1","alimentador":"ETR VH2 H11","seccionadores":{"EVH1_R13S1":{"dt":17.22,"instalaciones":["PCP-11","PCP-812","PCP-824","PCP-830","PCP-838","PCP-839","PCP-841","PCP-851","PCP-852","PCP-858","PCP-859","PVH-616","PVH-901"],"count":13},"EVH1_R13S2":{"dt":31.14,"instalaciones":["PCP-12","PCP-20","PCP-802","PCP-803","PCP-805","PCP-810","PCP-820","PCP-821","PCP-822","PCP-850","PCP-878","PR-1006","PR-1135","PR-980"],"count":14},"EVH1_R13S3":{"dt":97.46,"instalaciones":["PCP.a-866","PCP-17","PCP-27","PCP-30","PCP-804","PCP-806","PCP-809","PCP-813","PCP-833","PCP-845","PCP-862","PCP-864","PCP-867","PCP-874","PCP-876","PCP-877","PCP-880","PEG-1","PR-1012","PR-1014","PR-1017","PR-1018","PR-1019","PR-1020","PR-1021","PR-1037","PR-1038","PR-1039","PR-1041","PR-1044","PR-1049","PR-1071","PR-1112","PR-1113(d)","PR-1114","PR-1115","PR-1116","PR-1144","PR-1145(d)","PR-1148","PR-1172(d)","PR-1173","PR-1185","PR-1229","PR-889","PR-892","PR-894","PR-895","PR-896","PR-897","PR-909","PR-914","PR-921","PR-922","PR-924","PR-925","PR-962","PR-964","PR-1150(d)","PR-1152"],"count":60}}},"EVH1_R2":{"dt":241.75,"set":"SET_LFL","alimentador":"ETR VH2 H09","seccionadores":{"EVH1_R2S1":{"dt":26.05,"instalaciones":["PLF-3","PVH-1197","PVH-1413","PVH-1416","PVH-1428","PVH-829","PVH-830","PVH-833","PVH-838","PVH-841","PVH-864","PLF-2","PVH-1418"],"count":13},"EVH1_R2S2":{"dt":36.37,"instalaciones":["CH-69","PVH-817","PVH-820","PVH-834","PVH-851","PVH-966","PVH-1414","PVH-1533","PVH-1537","PVH-1599"],"count":10},"EVH1_R2S3":{"dt":28.89,"instalaciones":["PLF-860","PVH-1181","PVH-845","PVH-848","PVH-855","PVH-896","PVH-899","PVH-1534","PVH-1608(d)","PVH-1612(d)"],"count":10},"EVH1_R2S4":{"dt":66.3,"instalaciones":["PVH-1021","PVH-608","PVH-711","PVH-839","PVH-849","PVH-942","PVH-962","PVH-963","PVH-1431","PVH-1536","PVH-1600(d)","PVH-1535","PVH-1603","PVH-1601","PVH-1602(d)"],"count":15},"EVH1_R2S5":{"dt":84.13,"instalaciones":["CH-71","PRCh-1057","PVH-1036","PVH-1092","PVH-1093","PVH-1129","PVH-1247","PVH-1262","PVH-1311","PVH-1397","PVH-1532","PVH-1432","PVH-1605","PVH-1606","PVH-1609","PVH-1610"],"count":16}}},"EVH1_R3":{"dt":149.51,"set":"SET_VH3","alimentador":"ETR VH2 H02","seccionadores":{"EVH1_R3S1":{"dt":137.97,"instalaciones":["CH-11","CH-60","CH-62","CH-63","PLF.a-949","PLF-20","PLF-215","PLF-217","PLF-222","PLF-229","PLF-230","PLF-236","PLF-3","PLF-701","PLF-704","PLF-705","PLF-804","PLF-807","PLF-808","PLF-809","PLF-833","PLF-842","PLF-843","PLF-848","PLF-867","PLF-868","PLF-869","PLF-870","PLF-872","PLF-879","PLF-883b","PLF-884","PLF-885b","PLF-889","PLF-893(d)","PLF-894","PLF-896","PLF-898(I)","PLF-913","PLF-915","PLF-916","PLF-943","PLF-948","PLF-957(I)","PLF-958","PLF-959","ULF-10","ULF-12","ULF-7","PLF-982","PLF-960","PLF-980","PLF-985","PLF-886"],"count":54},"EVH1_R3S2":{"dt":11.54,"instalaciones":["PLF-1","PLF-802","PLF-810","PLF-811","PLF-873","PLF-877","PLF-878","PVH-1180","PVH-1188","PVH-1374","PVH-939","PVH-957","PVH-960","PVH-977","PVH-979"],"count":15}}},"EVH1_R4":{"dt":50.44,"set":"SET_LFL","alimentador":"ETR VH2 H09","seccionadores":{"EVH1_R4S1":{"dt":15.58,"instalaciones":["PLF-824","PLF-826","PLF-876","PRCh-1030","PRCh-1101"],"count":5},"EVH1_R4S2":{"dt":24.48,"instalaciones":["CH-20","CH-22","CH-23","PLF-10","PLF-204","PLF-207","PLF-209","PLF-818","PLF-820","PLF-821","PLF-822","PLF-825","PLF-827","PLF-829","PLF-836","PLF-858","PLF-859","PLF-924","T-124","PRCh-1111"],"count":20},"EVH1_R4S3":{"dt":10.38,"instalaciones":["PLF.xp-940","PLF-200","PLF-216","PLF-219","PLF-221","PLF-909"],"count":6}}},"EVH1_R5":{"dt":53.69,"set":"SET_VH1","alimentador":"ETR VH2 H11","seccionadores":{"EVH1_R5S2":{"dt":12.28,"instalaciones":["PLF-891","PVH-1154","PVH-1216","PVH-1217","PVH-1218","PVH-1282","PVH-1283","PVH-1297","VH-155","VH-203","VH-204"],"count":11},"EVH1_R5S3":{"dt":28.39,"instalaciones":["PVH-1317","PVH-1324","PVH-1328","PVH-1341","PVH-1498","PVH-1499","PVH-1503","PVH-645","PVH-847","VH-4"],"count":10},"EVH1_R5S4":{"dt":13.02,"instalaciones":["PLF-964","PVH-1045","PVH-1192","PVH-1279","PVH-931"],"count":5}}},"EVH1_R6":{"dt":117.03,"set":"SET_VH1","alimentador":"ETR VH2 H11","seccionadores":{"EVH1_R6S1":{"dt":14.52,"instalaciones":["PVH-1035","PVH-1109","PVH-1143","PVH-635","PVH-652","PVH-812","PVH-815","PVH-816","PVH-844","PVH-852","PVH-926","PVH-1567"],"count":12},"EVH1_R6S2":{"dt":60.85,"instalaciones":["PVH-1009","PVH-1010","PVH-1037","PVH-1066","PVH-1086","PVH-1313","PVH-1522","PVH-1524","PVH-1560","PVH-1581","PVH-647","PVH-704","PVH-705","PVH-805","PVH-927","PVH-928","PVH-1585","PVH-1587","PVH-1584(d)","PVH-1582","PVH-1130(d)","PVH-1588","PVH-1597","PVH-1615(d)"],"count":24},"EVH1_R6S3":{"dt":41.65,"instalaciones":["CP-56","PCP-819","PVH-1042","PVH-1054","PVH-1087","PVH-1101","PVH-1103","PVH-1122","PVH-1204","PVH-1487","PVH-1488","PVH-1579","PVH-622","PVH-642","PVH-649","PVH-823","PVH-897","PVH-1593(d)","PVH-1595","PVH-1592(d)","PVH-1616"],"count":21}}},"EVH1_R7":{"dt":56.55,"set":"SET_VH1","alimentador":"ETR VH2 H11","seccionadores":{"EVH1_R7S1":{"dt":4.04,"instalaciones":["PCP-811","PCP-827","PCP-836","PVH-1041"],"count":4},"EVH1_R7S2":{"dt":41.55,"instalaciones":["PCP-817","PCP-826","PCP-828","PCP-835","PCP-865","PVH-1052","PVH-1108","PVH-1125","PVH-1303","PVH-1318","PVH-1501","PVH-1504","PVH-1505","PVH-814","PVH-836","PVH-846","PVH-941","PVH-968","PVH-969","PVH-989"],"count":20},"EVH1_R7S3":{"dt":10.96,"instalaciones":["PCP-834","PCP-840","PCP-848","PCP-849","PEG-2","PEG-801","PEG-804","PEG-808","PEG-809","PEG-812","PEG-813"],"count":11}}},"EVH1_R8":{"dt":68.72,"set":"SET_VH1","alimentador":"ETR VH2 H11","seccionadores":{"EVH1_R8S2":{"dt":21.69,"instalaciones":["PVH-1017","PVH-1095","PVH-1227","PVH-1352","PVH-1379","PVH-1464","PVH-1469","PVH-1523","PVH-1562","PVH-1580","PVH-665","PVH-710","PVH-801","PVH-802","VH-65","VH-66"],"count":16},"EVH1_R8S3":{"dt":24.36,"instalaciones":["PVH-1031","PVH-1034","PVH-1074","PVH-1079(I)","PVH-1080","PVH-1323(I)","PVH-1325","PVH-1327","PVH-1461","PVH-1462","PVH-1493","PVH-1512","PVH-929","VH-414","VH-67"],"count":15},"EVH1_R8S4":{"dt":14.3,"instalaciones":["PVH-1043","PVH-1044","PVH-1049","PVH-1094","PVH-1205","PVH-1301","PVH-1566","PVH-659","PVH-842","PVH-912","PVH-949","PVH-999","VH-20","PVH-1565","PVH-1619(d)"],"count":15},"EVH1_R8S5":{"dt":8.37,"instalaciones":["PVH-1515","PVH-1516","VH-563"],"count":3}}},"EVH1_R9":{"dt":66.84,"set":"SET_VH1","alimentador":"ETR VH2 H11","seccionadores":{"EVH1_R9S1":{"dt":9.68,"instalaciones":["PVH-1026","PVH-1027","PVH-1028","PVH-1076","PVH-1123","PVH-1160","PVH-609","PVH-611","PVH-811","PVH-907","PVH-998"],"count":11},"EVH1_R9S2":{"dt":57.16,"instalaciones":["CP-57","PVH.a-1402","PVH-1003","PVH-1004","PVH-1025","PVH-1048","PVH-1053","PVH-1057","PVH-1073","PVH-1085","PVH-1088","PVH-1089","PVH-1100","PVH-1128","PVH-1211","PVH-1240","PVH-1378","PVH-1380","PVH-1403","PVH-1405","PVH-1406","PVH-1407","PVH-1429","PVH-1430","PVH-1434","PVH-1435","PVH-1436","PVH-1437","PVH-1438","PVH-1439","PVH-1440","PVH-1441","PVH-1447","PVH-1449","PVH-1450","PVH-1451","PVH-1465","PVH-1482","PVH-1483","PVH-1484","PVH-1485","PVH-1489","PVH-1490","PVH-1491","PVH-1544","PVH-1551","PVH-810","PVH-818","PVH-878","PVH-898","PVH-903","PVH-908","PVH-924","PVH-936","PVH-951","PVH-952","PVH-953","PVH-975","PVH-987","PVH-997","VH-32","VH-594"],"count":62}}},"EVH3_R4":{"dt":22.72,"set":"SET_VH3","alimentador":"ETR VH2 H02","seccionadores":{"EVH3_R4S1":{"dt":22.72,"instalaciones":["PLF-990","PLF-979","PLF-981","PLF-993(d)","PLF-991(d)","PLF-994","PLF-977(d)","PLF-975"],"count":8}}},"EVH3_R5":{"dt":48.6,"set":"SET_VH3","alimentador":"ETR VH2 H02","seccionadores":{"EVH3_R5S1":{"dt":29.12,"instalaciones":["PLF-857","PLF-861","PLF-946","PLF-947","PVH-1014","PVH-1022","PVH-1050","PVH-1183","PVH-1189","PVH-1223","PVH-1263","PVH-1289","PVH-1420"],"count":13},"EVH3_R5S2":{"dt":19.48,"instalaciones":["CH-66","PVH-1173","PVH-1233","PVH-1234","PVH-1235","PVH-1237","PVH-1251","PVH-1252","PVH-1264","PVH-1530","PLF-986","PLF-988","PLF-983","PLF-989"],"count":14}}},"EVMA_R1":{"dt":101.2,"set":"SET_VMA","alimentador":"ETR ZR2 H17","seccionadores":{"EVMA_R1S3":{"dt":25.49,"instalaciones":["PVM.a-1005","PVM-831","PVM-839","PVM-866","PVM-867","PVM-868","PVM-870","PVM-872","PVM-880","PVM-884","PVM-886","PVM-924","PVM-925","PVM-929","PVM-930","PVM-932","PVM-985"],"count":17},"EVMA_R1S1":{"dt":57.23,"instalaciones":["PVM-833","PVM-836","PVM-841","PVM-842","PVM-843","PVM-844","PVM-846","PVM-865","PVM-896","PVM-912","PVM-914","PVM-926","PVM-935","PVM-986","PVM-1021"],"count":15},"EVMA_R1S2":{"dt":12.42,"instalaciones":["PVM-829","PVM-837","PVM-838","PVM-853","PVM-856","PVM-977","PVM-981"],"count":7}}},"EVMA_R2":{"dt":9.72,"set":"SET_VMA","alimentador":"ETR ZR2 H17","seccionadores":{"EVMA_R2S1":{"dt":9.72,"instalaciones":["PVM-840","PVM-877","PVM-878","PVM-881","PVM-885","PVM-887","PVM-948","PVM-949","PVM-953","PVM-960"],"count":10}}},"EVMA_R3":{"dt":126.47,"set":"SET_VMA","alimentador":"ETR ZR2 H17","seccionadores":{"EVMA_R3S1":{"dt":8.18,"instalaciones":["PVM-1002","PVM-804","PVM-805","PVM-810","PVM-814","PVM-816","PVM-820","PVM-908","PVM-922","PVM-991"],"count":10},"EVMA_R3S2":{"dt":11.23,"instalaciones":["PVM-1","PVM-1003","PVM-7(I)","PVM-802","PVM-803","PVM-819","PVM-830","PVM-901","PVM-988"],"count":9},"EVMA_R3S3":{"dt":73.76,"instalaciones":["PVM-14","PVM-701","PVM-806","PVM-807","PVM-817","PVM-821","PVM-835","PVM-889","PVM-904","PVM-906","PVM-907","PVM-920(d)","PVM-921","PVM-944","PVM-946","PVM-950","PVM-958","PVM-973(d)","PVM-982","PVM-983","PVM-987","PVM-990","PVM-942(d)","PVM-1010(d)","PVM-1018","PVM-1019(d)","PVM-900","PVM-1023","PVM-1009(d)"],"count":29},"EVMA_R3S4":{"dt":33.3,"instalaciones":["PTP-838","PTP-853","PTP-898","PTP-926","PTP-954","PTP-959","PTP-961","PTP-963","PTP-964","PTP-967","PTP-969","PTP-986","PVM-808","PVM-809","PVM-813","PVM-888","PVM-891","PVM-892","PVM-978","PVM-989","PVM-993"],"count":21}}},"EVMA_R4":{"dt":143.4,"set":"SET_VMA","alimentador":"ETR ZR2 H17","seccionadores":{"EVMA_R4S1":{"dt":44.9,"instalaciones":["PTP-812","PTP-816","PTP-818","PTP-819","PTP-844","PTP-849","PTP-856","PTP-869","PTP-870","PTP-915","PTP-920","PTP-936","PTP-943","PTP-1020","PTP-1027"],"count":15},"EVMA_R4S2":{"dt":26.58,"instalaciones":["PTP-813","PTP-896","PTP-918","PTP-944","PTP-945","PTP-1008","PTP-1009","PTP-16"],"count":8},"EVMA_R4S3":{"dt":17.18,"instalaciones":["PTP-1","PTP-809","PTP-846","PTP-917","PTP-939","PTP-950","PTP-953","PZ-1183","PZ-140"],"count":9},"EVMA_R4S4":{"dt":54.74,"instalaciones":["PTP-821","PTP-822","PTP-840","PTP-850","PTP-851","PTP-864","PTP-872","PTP-880","PTP-919","PTP-955","PTP-960","PTP-976","PTP-984","PTP-985(d)","PTP-1024","PTP-1028","PTP-1025"],"count":17}}},"EVMA_R5":{"dt":142.8,"set":"SET_VMA","alimentador":"ETR ZR2 H17","seccionadores":{"EVMA_R5S1":{"dt":55.0,"instalaciones":["PTP-1002","PTP-1004","PTP-1006","PTP-839","PTP-858","PTP-892","PTP-906","PTP-908","PTP-909","PTP-910","PTP-941","PTP-974","PTP-982","PTP-983","PTr-4","PVM.a-994","PVM-1001","PVM-1004(d)","PVM-822","PVM-823","PVM-936","PVM-937","PVM-938","PVM-939","PVM-940","PVM-941","PVM-963","PVM-975","PVM-979","PVM-980","PVM-965","PVM-974"],"count":32},"EVMA_R5S3":{"dt":9.1,"instalaciones":["PZ-854","PZ-856","PZ-858","PZ-913","PZ-941","PZ-950","PZ-953"],"count":7},"EVMA_R5S4":{"dt":40.06,"instalaciones":["PTP-932","PZ-1034","PZ-1053","PZ-1054","PZ-1079","PZ-1080","PZ-1112","PZ-1128","PZ-1148","PZ-1198","PZ-1261","PZ-1283","PZ-1398","PZ-832","PZ-836","PZ-837","PZ-857","PZ-859","PZ-875","PZ-917","PZ-922","PZ-923","PZ-924","PZ-925","PZ-929","PZ-934","PZ-935","PZ-954","PZ-966","PZ-979"],"count":30},"EVMA_R5S5":{"dt":38.64,"instalaciones":["PTP-803","PTP-806","PTP-823b","PTP-825","PTP-829b","PTP-830","PTP-833","PTP-836","PTP-847","PTP-862","PTP-868","PTP-914","PTP-929","PTP-934","PZ-1003","PZ-1046","PZ-1260","PZ-1262","PZ-1397","PZ-840","PZ-843","PZ-899","PZ-958","Z-52","PTP-977"],"count":25}}},"EVMA_R6":{"dt":9.56,"set":"SET_VMA","alimentador":"ETR ZR2 H17","seccionadores":{"EVMA_R6S1":{"dt":9.56,"instalaciones":["PEH-801","PEH-802","PEH-803","PEH-805","PEH-807","PEH-808","PVM-824"],"count":7}}},"EVMA_R7":{"dt":23.37,"set":"SET_VMA","alimentador":"ETR ZR2 H17","seccionadores":{"EVMA_R7S2":{"dt":23.37,"instalaciones":["PEL-803","PEL-804","PEL-805","PEL-806","PEL-807","PEL-808","PEL-810","PEL-812"],"count":8}}},"EVMA_R8":{"dt":105.71,"set":"SET_VMA","alimentador":"ETR ZR2 H17","seccionadores":{"EVMA_R8S1":{"dt":58.41,"instalaciones":["PTP-1010(d)","PTP-886","PTP-930","PTP-956","PTP-962","PTP-965","PTP-966","PTP-970","PTP-971","PTP-972","PTP-973","PTP-980","PTP-981","PTP-987","PTP-989(d)","PTP-990","PTP-995","PTr.xp-2","PZ-1129","PZ-927","PZ-933","PZ-939","PTP-1005","PTP-1015(d)","PTP-1011(d)","PTr.xp-1","PTr-10","PTr-11","PTr-9"],"count":29},"EVMA_R8S2":{"dt":26.09,"instalaciones":["PTP-1000(d)","PTP-1012(d)","PTP-860","PTP-874","PTP-877","PTP-889","PTP-891","PTP-901","PTP-921","PTP-938","PTP-991","PTP-992(d)","PTP-994(d)","PTr-6","PTP-1001","PTP-1014"],"count":16},"EVMA_R8S3":{"dt":21.2,"instalaciones":["PTP-831","PTP-861","PTP-866","PTP-875","PTP-876","PTP-911","PTP-912","PTP-922","PTP-924","PTP-1029(d)"],"count":10}}},"EZR1_R1":{"dt":132.74,"set":"SET_ZR4","alimentador":"ETR RE2 H23","seccionadores":{"Conectado directamente del reconectador":{"dt":21.42,"instalaciones":["PLM-3","PLM-42","PLM-804","PLM-916(d)","PLM-931","PLM-942","PLM-953","PZ-824"],"count":8},"EZR1_R1S1":{"dt":68.09,"instalaciones":["PLM-1","PLM-16","PLM-18","PLM-817","PLM-818","PLM-819","PLM-820","PLM-826","PLM-835","PLM-839","PLM-843","PLM-844","PLM-845","PLM-846","PLM-848","PLM-856","PLM-857","PLM-860","PLM-891","PLM-922(d)","PLM-927(d)","PLM-957","PLM-923"],"count":23},"EZR1_R1S2":{"dt":21.33,"instalaciones":["PLM-4","PLM-805","PLM-850","PLM-853","PLM-907(d)","PLM-919"],"count":6},"EZR1_R1S3":{"dt":21.9,"instalaciones":["PLM-824(d)","PLM-877","PLM-903","PLM-911","PLM-915","PLM-920","PZ-701"],"count":7}}},"EZR1_R10":{"dt":30.17,"set":"SET_ZR1","alimentador":"ETR ZR2 H05","seccionadores":{"EZR1_R10S2":{"dt":17.5,"instalaciones":["PZ-1040","PZ-1041","PZ-1108","PZ-1189","PZ-1194","PZ-150","PZ-703","PZ-936"],"count":8},"EZR1_R10S3":{"dt":12.66,"instalaciones":["PZ-1013","PZ-1299","PZ-1308","PZ-1312","PZ-722","PZ-937","PZ-987"],"count":7}}},"EZR1_R11":{"dt":70.06,"set":"SET_LMS","alimentador":"ETR ZR2 H03","seccionadores":{"EZR1_R11S1":{"dt":42.06,"instalaciones":["PZ-1000","PZ-1031","PZ-1113","PZ-1143","PZ-1170","PZ-1172","PZ-1181","PZ-1182","PZ-1291","PZ-1351","PZ-1402(d)","PZ-1462","PZ-63","PZ-712","PZ-74","PZ-76","PZ-834","PZ-907","PZ-991","PZ-1540(d)","PZ-1542(d)"],"count":21},"EZR1_R11S2":{"dt":28.0,"instalaciones":["PZ-1144","PZ-1169","PZ-1178","PZ-1240","PZ-1295","PZ-1463","PZ-75","PZ-88","PZ-894"],"count":9}}},"EZR1_R12":{"dt":69.36,"set":"SET_ZR1","alimentador":"ETR ZR2 H05","seccionadores":{"EZR1_R12S1":{"dt":27.35,"instalaciones":["PZ-1056","PZ-1230","PZ-1311","PZ-36","PZ-46","PZ-809","PZ-813","PZ-1664(d)"],"count":8},"EZR1_R12S2":{"dt":42.01,"instalaciones":["PZ-1011","PZ-1123","PZ-1124","PZ-1125","PZ-1127","PZ-1142","PZ-1294(d)","PZ-1310","PZ-1349","PZ-1350(d)","PZ-1419(I)","PZ-34","PZ-868","PZ-989","PZ-999"],"count":15}}},"EZR1_R14":{"dt":80.83,"set":"SET_ZR1","alimentador":"ETR ZR2 H05","seccionadores":{"EZR1_R14S1":{"dt":31.52,"instalaciones":["PZ-102","PZ-1071","PZ-1176","PZ-1418","PZ-47","PZ-814","PZ-903","PZ-904","PZ.xp-1654"],"count":9},"EZR1_R14S2":{"dt":49.31,"instalaciones":["PZ-1008","PZ-1179(I)","PZ-1250","PZ-1417","PZ-1457","PZ-43","PZ-808","PZ-816","PZ-914","PZ-944","PZ-977"],"count":11}}},"EZR1_R15":{"dt":86.31,"set":"SET_ZR1","alimentador":"ETR ZR2 H05","seccionadores":{"EZR15_R15S3":{"dt":30.95,"instalaciones":["PLM-814","PLM-832","PLM-866","PLM-875","PLM-886","PLM-895","PLM-897","PLM-935","PLM-951","PLM-971"],"count":10},"EZR1_R15S1":{"dt":15.16,"instalaciones":["PLM-944","PLM-945","PLM-946","PLM-947"],"count":4},"EZR1_R15S2":{"dt":40.2,"instalaciones":["PLM-35","PLM-823","PLM-838","PLM-876","PLM-902","PLM-921","PLM-924","PLM-930","PLM-934","PLM-948","PLM-949","PLM-952"],"count":12}}},"EZR1_R2":{"dt":67.81,"set":"SET_ZR6","alimentador":"ETR RE2 H21","seccionadores":{"EZR1_R2S1":{"dt":15.02,"instalaciones":["PLMS-30","PLMS-705","PLMS-822","PLMS-823","PLMS-825","PLMS-888","PLMS-889"],"count":7},"EZR1_R2S2":{"dt":52.79,"instalaciones":["PLMS-25","PLMS-802","PLMS-803","PLMS-813","PLMS-828","PLMS-852","PLMS-857","PLMS-886","PLMS-9","PLMS-903","PLMS-911","PLMS-951","PLMS-952","PLMS-959","PLMS-960","PLMS-961","PLMS-970","PLMS-972","PZ-1543","PZ-1544(I)","PZ-1564","PZ-1558"],"count":22}}},"EZR1_R3":{"dt":61.16,"set":"SET_ZR3","alimentador":"ETR ZR2 H07","seccionadores":{"Conectado directamente del reconectador":{"dt":0.12,"instalaciones":["PZ-842"],"count":1},"EZR1_R3S2":{"dt":28.76,"instalaciones":["PZ-1017","PZ-1105","PZ-1167","PZ-119","PZ-1234","PZ-1236","PZ-806","PZ-87"],"count":8},"EZR1_R3S3":{"dt":18.92,"instalaciones":["PZ-116","PZ-118","PZ-1226","PZ-1235","PZ-1237","PZ-125","PZ-708","PZ-721","PZ-990"],"count":9},"EZR1_R3S4":{"dt":13.37,"instalaciones":["PZ-841","PZ-1571(d)","PZ-1270(d)","PZ-1272","PZ-1585(d)"],"count":5}}},"EZR1_R4":{"dt":62.56,"set":"SET_ZR1","alimentador":"ETR ZR2 H05","seccionadores":{"EZR1_R4S2":{"dt":35.52,"instalaciones":["PZ-1263","PZ-62","PZ-867","PZ-967","PZ-976","PZ-998","PZ-1499(d)","PZ-1501"],"count":8},"EZR1_R4S3":{"dt":27.04,"instalaciones":["PZ-111","PZ-1415","PZ-1458","PZ-72","PZ-82","PZ-848","PZ-884","PZ-895","PZ-896","PZ-900","PZ-968"],"count":11}}},"EZR1_R5":{"dt":26.49,"set":"SET_ZR1","alimentador":"ETR ZR2 H05","seccionadores":{"Conectado directamente del reconectador":{"dt":2.44,"instalaciones":["PZ-723","PZ-724"],"count":2},"EZR1_R5S1":{"dt":11.5,"instalaciones":["PZ-1278","PZ-175","PZ-22","PZ-804","PZ-851","PZ-879","PZ-901"],"count":7},"EZR1_R5S2":{"dt":9.43,"instalaciones":["PZ-1015","PZ-1227","PZ-1229","PZ-1231"],"count":4},"EZR1_R5S3":{"dt":0.66,"instalaciones":["PZ-131","PZ-846"],"count":2},"EZR1_R5S4":{"dt":2.47,"instalaciones":["PZ-1572","PZ-715","PZ-802"],"count":3}}},"EZR1_R6":{"dt":44.11,"set":"SET_ZR6","alimentador":"ETR RE2 H21","seccionadores":{"EZR1_R6S1":{"dt":12.93,"instalaciones":["PZ-1032","PZ-1074","PZ-1098","PZ-1119","PZ-1121","PZ-124"],"count":6},"EZR1_R6S2":{"dt":22.9,"instalaciones":["PZ-1049","PZ-1050","PZ-1057","PZ-1151","PZ-13","PZ-182","PZ-717","PZ-811","PZ-891"],"count":9},"EZR1_R6S4":{"dt":8.29,"instalaciones":["PZ-1006","PZ-1022","PZ-181"],"count":3}}},"EZR1_R7":{"dt":102.99,"set":"SET_ZR1","alimentador":"ETR ZR2 H05","seccionadores":{"Conectado directamente del reconectador":{"dt":0.43,"instalaciones":["PZ-820"],"count":1},"EZR1_R7S1":{"dt":61.23,"instalaciones":["PLM-26","PLM-810","PLM-812","PLM-831","PLM-852","PLM-859","PLM-871","PLM-873","PLM-888","PLM-890","PLM-899","PLM-901","PLM-913","PLM-926","PLM-908","PLM-932","PLM-933","PLM-809"],"count":18},"EZR1_R7S2":{"dt":41.33,"instalaciones":["PLM-17","PLM-23","PLM-31","PLM-701","PLM-802","PLM-806","PLM-811","PLM-816","PLM-828","PLM-837","PLM-847","PLM-872","PLM-938(d)","PLM-937(d)","PLM-964(d)","PLM-956(d)"],"count":16}}},"EZR1_R9":{"dt":30.89,"set":"SET_ZR1","alimentador":"ETR ZR2 H05","seccionadores":{"EZR1_R9S1":{"dt":14.03,"instalaciones":["PZ-1016","PZ-1076","PZ-109","PZ-1120","PZ-1166","PZ-49","PZ-726"],"count":7},"EZR1_R9S2":{"dt":16.86,"instalaciones":["PZ-1005","PZ-1048","PZ-1067","PZ-1091","PZ-1107","PZ-1243","PZ-1296","PZ-1515","PZ-186","PZ-833"],"count":10}}},"EZR3_R3":{"dt":49.93,"set":"SET_ZR3","alimentador":"ETR ZR2 H07","seccionadores":{"EZR3_R3S1":{"dt":38.36,"instalaciones":["PZ-106","PZ-1193","PZ-1205","PZ-1206","PZ-1207","PZ-1208","PZ-1209","PZ-143","PZ-1492","PZ-1570","PZ-835","PZ-861","PZ-864","PZ-959","PZ-960","PZ-1642","PZ-1644"],"count":17},"EZR3_R3S2":{"dt":11.57,"instalaciones":["PZ-1110(I)","PZ-1190","PZ-1195","PZ-1196","PZ-1197","PZ-862"],"count":6}}},"EZR3_R4":{"dt":33.13,"set":"SET_ZR5","alimentador":"ETR OR2 H12","seccionadores":{"EZR3_R4S1":{"dt":24.43,"instalaciones":["PO-1147","PO-1063","PO-1064","PO-1106","PO-1107","PO-1108","PO-1115","PO-1128","PO-1129","PO-1130"],"count":10},"EZR3_R4S2":{"dt":8.7,"instalaciones":["PO.a-1089","PO-1085","PO-1086","PO-1123","PO-1124"],"count":5}}},"EZR3_R5":{"dt":37.86,"set":"SET_ZR3","alimentador":"ETR ZR2 H07","seccionadores":{"EZR3_R5S1":{"dt":35.04,"instalaciones":["PZ-10","PZ-1020","PZ-1023","PZ-1037","PZ-1051","PZ-1132","PZ-1137","PZ-1155","PZ-1156","PZ-826","PZ-866","PZ-980","PZ-981","PZ-1245","PZ-1567(d)"],"count":15},"EZR3_R5S2":{"dt":2.82,"instalaciones":["PZ-1025","PZ-1102"],"count":2}}},"EZR3_R6":{"dt":74.48,"set":"SET_ZR3","alimentador":"ETR ZR2 H07","seccionadores":{"EZR3_R6S1":{"dt":16.6,"instalaciones":["PZ-1027","PZ-1039","PZ-1069","PZ-1073","PZ-1093","PZ-815","PZ-829","PZ-992","PZ-993"],"count":9},"EZR3_R6S2":{"dt":57.88,"instalaciones":["PZ-1012","PZ-1021","PZ-1026","PZ-1038","PZ-1134","PZ-1140","PZ-1200","PZ-1201","PZ-1244","PZ-1355","PZ-1369","PZ-1370","PZ-1373","PZ-1469","PZ-1470(I)","PZ-1516","PZ-957","PZ-971"],"count":18}}},"EZR4_R1":{"dt":112.69,"set":"SET_ZR4","alimentador":"ETR RE2 H23","seccionadores":{"EZR4_R1S1":{"dt":26.53,"instalaciones":["PZ-1007","PZ-1018","PZ-1024","PZ-1029","PZ-1030","PZ-1052","PZ-1061","PZ-1085","PZ-1103","PZ-183","PZ-716","PZ-876","PZ-882","PZ-961","PZ-969","PZ-970"],"count":16},"EZR4_R1S3":{"dt":86.17,"instalaciones":["PZ-1131","PZ-1136","PZ-1154","PZ-1163","PZ-1164","PZ-1217","PZ-1249","PZ-1297","PZ-1343","PZ-1368(d)","PZ-1371","PZ-1372","PZ-1424","PZ-1473(I)","PZ-1479","PZ-1481","PZ-1550","PZ-1551","PZ-1552(d)","PZ-1656","PZ-1657(d)","PZ-1655","PZ-1659","PZ-1660"],"count":24}}},"EZR4_R2":{"dt":237.81,"set":"SET_ZR7","alimentador":"ETR ZR2 H21","seccionadores":{"EZR4_R2S1":{"dt":23.76,"instalaciones":["PZ.a-1317","PZ.x-1104","PZ-1367","PZ-1436","PZ-1437"],"count":5},"EZR4_R2S2":{"dt":27.22,"instalaciones":["PZ-1139","PZ-1157","PZ-1159","PZ-1160","PZ-1161","PZ-1162","PZ-1344","PZ-1426","PZ-1507","PZ-1508","PZ-1509","PZ-1562"],"count":12},"EZR4_R2S3":{"dt":14.16,"instalaciones":["PG.a-2","PG-1","PZ.a-1211","PZ-1268","PZ-1547"],"count":5},"EZR4_R2S5":{"dt":172.67,"instalaciones":["PZ-1563","PZ-1568","PZ-1569","PZ-1670","PZ-1559","PZ-1669","PZ-1671","PZ-1668","PZ-1674","PZ-1675","PZ-1684","PZ-1685","PZ-1687","PZ-1686","PZ-1692","PZ-1695","PZ.a-1673","PZ-1560(d)","PZ-1693","PZ-1694","PZ-1732"],"count":21}}},"EZR5_R1":{"dt":122.49,"set":"SET_ZR5","alimentador":"ETR OR2 H12","seccionadores":{"EZR5_R1S1":{"dt":19.66,"instalaciones":["PZ-1094","PZ-1141","PZ-1288","PZ-1302","PZ-1304","PZ-1305","PZ-823","PZ-91","PZ-938","PZ-996"],"count":10},"EZR5_R1S2":{"dt":102.83,"instalaciones":["PZ-1028","PZ-1058","PZ-1059","PZ-1060","PZ-1068","PZ-1084","PZ-1096","PZ-1097","PZ-1150","PZ-1152","PZ-1247","PZ-1357","PZ-1411","PZ-1512","PZ-905","PZ-906","PZ-92","PZ-982","PZ-983","PZ-1364(d)","PZ-1647","PZ-1661","PZ-1116"],"count":23}}},"EZR5_R2":{"dt":22.93,"set":"SET_ZR5","alimentador":"ETR OR2 H12","seccionadores":{"EZR5_R2S3":{"dt":22.93,"instalaciones":["PZ-1379","PZ-1387","PZ-1390","PZ-1391","PZ-1392","PZ-1414","PZ-1432","PZ-1434","PZ-1447","PZ-1451","PZ-1453","PZ-1548","PZ-1575","PO-1266"],"count":14}}},"EZR5_R3":{"dt":62.4,"set":"SET_ZR5","alimentador":"ETR OR2 H12","seccionadores":{"EZR5_R3S1":{"dt":58.28,"instalaciones":["PZ-1337","PZ-1376","PZ-1378","PZ-1381","PZ-1384","PZ-1385","PZ-1403","PZ-1406","PZ-1412","PZ-1421","PZ-1428","PZ-1430","PZ-1465","PZ-1484(d)","PZ-1485","PZ-1486","PZ-1487","PZ-1488","PZ-1489","PZ-1539(d)","PZ-1645","PZ-1646"],"count":22},"EZR5_R3S2":{"dt":4.12,"instalaciones":["PZ-1334","PZ-1335","PZ-1336","PZ-1374"],"count":4}}},"EZR5_R5":{"dt":58.4,"set":"SET_ZR5","alimentador":"ETR OR2 H12","seccionadores":{"EZR5_R5S1":{"dt":22.59,"instalaciones":["PZ.a-1315","PZ-1248","PZ-1339","PZ-1383","PZ-1386","PZ-1388","PZ-1404","PZ-1422","PZ-1435","PZ-1443","PZ-1471"],"count":11},"EZR5_R5S2":{"dt":35.8,"instalaciones":["PZ-1219","PZ-1269","PZ-1340","PZ-1342","PZ-1366","PZ-1413","PZ-1474","PZ-1480","PZ-1506","PZ-1554","PZ-1557"],"count":11}}},"EZR5_R6":{"dt":68.78,"set":"SET_ZR5","alimentador":"ETR OR2 H12","seccionadores":{"EZR5_R6S1":{"dt":28.99,"instalaciones":["PO-1116","PO-1118","PO-1125","PO-1126","PO-1134","PO-1191","PO-1192","PZ-1338","PZ-1393","PZ-1408","PZ-1493"],"count":11},"EZR5_R6S2":{"dt":39.78,"instalaciones":["PO-1109","PO-1117","PO-1122","PO-1136","PO-1139","PO-1140","PO-1141","PO-1179","PO-1188","PO-1189","PO-1214"],"count":11}}},"EZR6_R1":{"dt":133.91,"set":"SET_ZR6","alimentador":"ETR RE2 H21","seccionadores":{"EZR6_R1S1":{"dt":100.12,"instalaciones":["PJ-812","PJ-842","PJ-844","PJ-852","PJ-853","PJ-868","PJ-869(d)","PJ-864","PJ-866","PJ-872","PJ-848","PJ-881","PJ-865(I)","PJ-884","PJ-888","PJ-886","PJ-885","PJ-887","PJ-883(d)","PJ-850","PJ-882(d)"],"count":21},"EZR6_R1S2":{"dt":33.79,"instalaciones":["PJ.a-822","PJ-4","PJ-803","PJ-815","PJ-825","PJ-826(I)","PJ-827","PJ-841","PJ-856","PJ-858","PJ-862","PJ-859","PJ-860"],"count":13}}},"EZR6_R2":{"dt":4.4,"set":"SET_ZR6","alimentador":"ETR RE2 H21","seccionadores":{"EZR6_R2S2":{"dt":4.4,"instalaciones":["PJ.a-817","PJ-806","PJ-879"],"count":3}}},"EZR6_R3":{"dt":277.27,"set":"SET_ZR6","alimentador":"ETR RE2 H21","seccionadores":{"EZR6_R3S1":{"dt":126.38,"instalaciones":["PJ-824","PJ-830","PJ-831","PJ-832","PJ-833","PJ-835","PJ-836","PJ-837","PCH-830","PCH-835","PCH-837","PCH-861(d)","PCH-864(d)"],"count":13},"EZR6_R3S2":{"dt":150.9,"instalaciones":["PCH-801","PCH-802","PCH-803","PCH-806(I)","PCH-807","PCH-808","PCH-811","PCH-823","PJ-828","PCH-824","PCH-828","PJ-875","PCH-829","PCH-822","PCH-813","PCH-841","PCH-843(d)","PCH-862(d)"],"count":18}}},"EZR6_R4":{"dt":232.0,"set":"SET_ZR6","alimentador":"ETR RE2 H21","seccionadores":{"EZR6_R4S1":{"dt":232.0,"instalaciones":["PLMS-1","PLMS-6","PLMS-819","PLMS-847","PLMS-862","PLMS-963","PLMS-964","PLMS-965","PLMS-974(d)","PLMS-986","PLMS-989","PLMS-992","PLMS-994","PLMS-988","PLMS-993","PLMS-1020","PLMS-1014","PLMS-1018","PLMS-1017","PLMS-1016","PZ-1681","PLMS-1040","PLMS-1034(d)","PLMS-1036(d)","PLMS-1041","PLMS-1035","PLMS-1037","PLMS-1039","PLMS-1044","PLMS-1043","PLMS-1032","PZ-1682","PZ-1724","PLMS-1052","PLMS-1047","PLMS-1046","PLMS-1051(d)","PLMS-1053","PZ-1726","PZ-1727"],"count":40}}}},"ali_info":{"ETR CD2 H02":{"dt":351.42,"reconectadores":["ECDN_R1","ECDN_R2","ECDN_R3"]},"ETR CD2 H03":{"dt":338.71,"reconectadores":["ECG3_R4","ECG3_R3","ECG3_R1"]},"ETR CD2 H05":{"dt":397.9,"reconectadores":["ECDN_R6","ECG1_R13","ECDN_R4","ECD3_R2","ECD3_R3"]},"ETR CD2 H07":{"dt":300.59,"reconectadores":["ECG1_R11","ECG2_R2","ECG1_R4","ECG2_R1"]},"ETR CD2 H17":{"dt":619.58,"reconectadores":["ECG1_R9","ECG1_R14","ECG1_R8","ECG1_R7","ECG1_R5","ECG1_R12","ECG1_R1","ECG1_R6"]},"ETR CD2 H18":{"dt":219.99,"reconectadores":["ECT2_RCTN","ECT2_R6","ECT2_R3","ECT2_R4","ECT2_R8","ECT2_RCH"]},"ETR CD2 H19":{"dt":476.76,"reconectadores":["ERE1_R2","ECG1_R3","ECG1_R2","ELMS_R4"]},"ETR CD2 H20":{"dt":754.23,"reconectadores":["EPAM_R4","EPAM_R2","EPAM_R1","EPAM_R3"]},"ETR OR2 H03":{"dt":1257.13,"reconectadores":["EESC_R6","EESC_R2","EESC_R1","EESC_R4","EOR1_R4","EOR1_R5"]},"ETR OR2 H04":{"dt":467.21,"reconectadores":["EOR3_R4","EOR3_R1","EOR3_R5","EOR3_R2","EOR3_R6"]},"ETR OR2 H11":{"dt":443.76,"reconectadores":["EBAY_R5","EBAY_R4","EBAY_R2","EBAY_R1","EBAY_R3","EMSC_R5","EMSC_R6","EMSC_R1","EMSC_R2","EMSC_R3","EMSC_R4"]},"ETR OR2 H12":{"dt":368.13,"reconectadores":["EZR3_R4","EZR5_R6","EZR5_R5","EZR5_R1","EZR5_R3","EZR5_R2"]},"ETR OR2 H13":{"dt":674.16,"reconectadores":["EOR1_R3","EOR1_R1","EOR1_R8","EOR1_R7","EOR1_R2","EOR1_R6"]},"ETR OR2 H15":{"dt":288.22,"reconectadores":["EAGR_R3","EAGR_R4","EAGR_R1","EAGR_R2"]},"ETR RE2 H19":{"dt":539.34,"reconectadores":["ELMS3_R5","ELMS_R2","ELMS_R1","ELMS3_R4","ELMS3_R2","ELMS_R3","ELMS3_R3","ELMS3_R6"]},"ETR RE2 H21":{"dt":759.5,"reconectadores":["EZR6_R3","EZR6_R2","EZR6_R1","EZR6_R4","EZR1_R2","EZR1_R6"]},"ETR RE2 H23":{"dt":245.43,"reconectadores":["EZR1_R1","EZR4_R1"]},"ETR VH2 H02":{"dt":436.41,"reconectadores":["EVH1_R3","EVH3_R5","EVH1_R1","ELFL_R1","EVH3_R4"]},"ETR VH2 H09":{"dt":721.59,"reconectadores":["EVH1_R4","EVH1_R2","ELFL_R4","ELFL_R2","ELFL_R3"]},"ETR VH2 H11":{"dt":647.83,"reconectadores":["EVH1_R6","EVH1_R9","EVH1_R11","EVH1_R13","EVH1_R7","EVH1_R5","EVH1_R12","EVH1_R8","EVH1_R10"]},"ETR ZR2 H03":{"dt":279.15,"reconectadores":["ELMS_R5","ELMS_R6","EZR1_R11"]},"ETR ZR2 H05":{"dt":489.61,"reconectadores":["EZR1_R10","EZR1_R12","EZR1_R14","EZR1_R15","EZR1_R4","EZR1_R5","EZR1_R7","EZR1_R9"]},"ETR ZR2 H07":{"dt":223.42,"reconectadores":["EZR3_R5","EZR3_R6","EZR1_R3","EZR3_R3"]},"ETR ZR2 H17":{"dt":662.22,"reconectadores":["EVMA_R6","EVMA_R7","EVMA_R4","EVMA_R8","EVMA_R5","EVMA_R3","EVMA_R1","EVMA_R2"]},"ETR ZR2 H21":{"dt":289.03,"reconectadores":["EZR4_R2","EOR3_R3"]}}};
+
+// Buscar DT para un equipo dado (alimentador, reconectador o seccionador)
+function getDT(equipo) {
+  if (!equipo) return null;
+  eq = equipo.trim().toUpperCase().replace(/\s+/g,' ');
+
+  // Normalizar "ETR OR2 H15" → buscar en alimentadores
+  if (RED.alimentadores[equipo]) return { nivel:'Alimentador', dt:RED.alimentadores[equipo], info: RED.ali_info[equipo] };
+
+  // Reconectador exacto
+  if (RED.reconectadores[equipo]) return { nivel:'Reconectador', dt:RED.reconectadores[equipo], info: RED.rec_info[equipo] };
+
+  // Seccionador exacto
+  if (RED.seccionadores[equipo]) return { nivel:'Seccionador', dt:RED.seccionadores[equipo], info: null };
+
+  // Búsqueda parcial case-insensitive
+  for (const k of Object.keys(RED.alimentadores)) {
+    if (k.toLowerCase().includes(equipo.toLowerCase()) || equipo.toLowerCase().includes(k.toLowerCase()))
+      return { nivel:'Alimentador', dt:RED.alimentadores[k], info: RED.ali_info[k] };
+  }
+  for (const k of Object.keys(RED.reconectadores)) {
+    if (k.toLowerCase() === equipo.toLowerCase())
+      return { nivel:'Reconectador', dt:RED.reconectadores[k], info: RED.rec_info[k] };
+  }
+  for (const k of Object.keys(RED.seccionadores)) {
+    if (k.toLowerCase() === equipo.toLowerCase())
+      return { nivel:'Seccionador', dt:RED.seccionadores[k], info: null };
+  }
+  return null;
+}
+
+// Para un evento eléctrico, devuelve DT total e instalaciones aguas abajo
+function getEventDT(equipos_str) {
+  if (!equipos_str) return null;
+  const equipos = equipos_str.split(',').map(e => e.trim()).filter(Boolean);
+  let maxDT = 0, bestResult = null;
+  for (const eq of equipos) {
+    const r = getDT(eq);
+    if (r && r.dt > maxDT) { maxDT = r.dt; bestResult = { ...r, equipo: eq }; }
+  }
+  return bestResult;
+}
+const SHEET_NAME = 'Novedades Operativas';
+const PAGE_SIZE = 50;
+
+var allData = [];
+let filtered = [];
+let currentPage = 0;
+let sortCol = 'Fecha';
+let sortAsc = false;
+
+const COLOR_MAP = {
+  'Arranque':  { bg:'#C6EFCE', color:'#276221' },
+  'Paro':      { bg:'#FFEB9C', color:'#7D6608' },
+  'Disparo':   { bg:'#FF9999', color:'#8B0000' },
+  'Recierre':  { bg:'#FCE4D6', color:'#843C0C' },
+  'Apertura':  { bg:'#F4CCCC', color:'#660000' },
+  'Cierre':    { bg:'#D9EAD3', color:'#1E4620' },
+  'Falla':     { bg:'#EA9999', color:'#660000' },
+  'Maniobra':  { bg:'#CFE2F3', color:'#1F4E79' },
+  'Evento':    { bg:'#F2F2F2', color:'#444444' },
+};
+
+async function loadData() {
+  document.getElementById('loading').style.display = 'block';
+  document.getElementById('content').style.display = 'none';
+
+  const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(SHEET_NAME)}`;
+
+  try {
+    const resp = await fetch(url);
+    if (!resp.ok) throw new Error('No se pudo conectar');
+    const text = await resp.text();
+    allData = parseCSV(text);
+    applyPendingStates();
+    buildRowNumCache();
+    applyFilters();
+    buildFilters();
+    renderCards();
+    renderOpenEvents();
+    renderAlertas();
+    document.getElementById('last-update').textContent =
+      'Última actualización: ' + new Date().toLocaleTimeString('es-AR');
+    document.getElementById('loading').style.display = 'none';
+    document.getElementById('content').style.display = 'block';
+  } catch(e) {
+    document.getElementById('loading').innerHTML =
+      `<div style="color:#C0392B;padding:20px">
+        <strong>No se pudo cargar la planilla.</strong><br>
+        Asegurate de que la planilla sea pública:<br>
+        Google Sheets → Compartir → "Cualquier persona con el enlace puede ver"<br><br>
+        <small style="color:#888">${e.message}</small>
+      </div>`;
+  }
+}
+
+function parseCSV(text) {
+  const lines = text.split('\n').filter(l => l.trim());
+  if (lines.length < 2) return [];
+  const headers = parseCSVLine(lines[0]);
+  const rows = [];
+  for (let i = 1; i < lines.length; i++) {
+    const vals = parseCSVLine(lines[i]);
+    if (!vals[0]) continue;
+    const obj = {};
+    headers.forEach((h, idx) => { obj[h.replace(/"/g,'')] = (vals[idx]||'').replace(/"/g,'').trim(); });
+    rows.push(obj);
+  }
+  return rows;
+}
+
+function parseCSVLine(line) {
+  const result = []; let cur = ''; let inQ = false;
+  for (let i = 0; i < line.length; i++) {
+    const c = line[i];
+    if (c === '"') { inQ = !inQ; }
+    else if (c === ',' && !inQ) { result.push(cur); cur = ''; }
+    else { cur += c; }
+  }
+  result.push(cur);
+  return result;
+}
+
+function applyFilters() {
+  const buscar = document.getElementById('f-buscar').value.toLowerCase();
+  const cat    = document.getElementById('f-cat').value;
+  const sub    = document.getElementById('f-sub').value;
+  const accion = document.getElementById('f-accion').value;
+  const estado = document.getElementById('f-estado').value;
+  const desde  = document.getElementById('f-desde').value;
+  const hasta  = document.getElementById('f-hasta').value;
+
+  filtered = allData.filter(r => {
+    if (cat    && r['Categoría']    !== cat)    return false;
+    if (sub    && r['Subcategoría'] !== sub)    return false;
+    if (accion && r['Acción']       !== accion) return false;
+    if (estado && r['Estado']       !== estado) return false;
+    if (buscar && !JSON.stringify(r).toLowerCase().includes(buscar)) return false;
+    if (desde || hasta) {
+      const parts = (r['Fecha']||'').split('/');
+      if (parts.length === 3) {
+        const d = `${parts[2]}-${parts[1].padStart(2,'0')}-${parts[0].padStart(2,'0')}`;
+        if (desde && d < desde) return false;
+        if (hasta && d > hasta) return false;
+      }
+    }
+    return true;
+  });
+
+  currentPage = 0;
+  // Ordenar por defecto: más reciente primero
+  filtered.sort((a, b) => {
+    const toISO = r => {
+      const p = (r['Fecha']||'').split('/');
+      return p.length===3 ? `${p[2]}-${p[1].padStart(2,'0')}-${p[0].padStart(2,'0')}T${(r['Hora Evento']||r['Hora Mensaje']||'00:00')}` : '';
+    };
+    return toISO(b).localeCompare(toISO(a));
+  });
+  renderTable();
+}
+
+function buildFilters() {
+  const cats    = [...new Set(allData.map(r => r['Categoría']).filter(Boolean))].sort();
+  const subs    = [...new Set(allData.map(r => r['Subcategoría']).filter(Boolean))].sort();
+  const accions = [...new Set(allData.map(r => r['Acción']).filter(Boolean))].sort();
+
+  const populate = (id, vals) => {
+    const sel = document.getElementById(id);
+    const first = sel.options[0];
+    sel.innerHTML = '';
+    sel.appendChild(first);
+    vals.forEach(v => { const o = document.createElement('option'); o.value = o.textContent = v; sel.appendChild(o); });
+  };
+  populate('f-cat', cats);
+  populate('f-sub', subs);
+  populate('f-accion', accions);
+}
+
+function renderCards() {
+  const total    = allData.length;
+  const hoy      = new Date(); const hoyStr = `${hoy.getDate()}/${hoy.getMonth()+1}/${hoy.getFullYear()}`;
+  const hoyCount = allData.filter(r => r['Fecha'] === hoyStr).length;
+  const pending  = allData.filter(r => r['Estado'] === 'Pendiente' && r['Categoría'] === 'Sistema Eléctrico').length;
+
+  // Disparos reales: solo Acción=Disparo, subcategoría TG, excluyendo "entra en servicio por disparo"
+  const esDisparoReal = r => {
+    if (r['Acción'] !== 'Disparo') return false;
+    const desc = (r['Descripción']||'').toLowerCase();
+    // Excluir si la descripción indica que ENTRA en servicio como consecuencia del disparo de otra
+    if (/entra.*por disparo|ingresa.*por disparo|en servicio.*por disparo|por reserva.*disparo/.test(desc)) return false;
+    return true;
+  };
+  const disparos = allData.filter(esDisparoReal).length;
+  const abiertos = allData.filter(r =>
+    ['Apertura','Falla'].includes(r['Acción']) &&
+    r['Categoría'] === 'Sistema Eléctrico' &&
+    r['Estado'] !== 'Resuelto'
+  ).length;
+
+  document.getElementById('cards').innerHTML = `
+    <div class="card blue" style="cursor:pointer" onclick="showModal('total')">
+      <div class="label">Total histórico</div><div class="value">${total}</div><div class="sub" style="color:#2E75B6">Ver todo →</div>
+    </div>
+    <div class="card green" style="cursor:pointer" onclick="showModal('hoy')">
+      <div class="label">Hoy</div><div class="value">${hoyCount}</div><div class="sub" style="color:#27AE60">${hoyStr} →</div>
+    </div>
+    <div class="card amber" style="cursor:pointer" onclick="showModal('pendientes')">
+      <div class="label">Pendientes</div><div class="value">${pending}</div><div class="sub" style="color:#E67E22">Sist. eléctrico →</div>
+    </div>
+  `;
+
+  renderMachineStats(esDisparoReal);
+}
+
+// ── MODAL INTERACTIVO ──────────────────────────────────────────────────────
+function showModal(tipo) {
+  let titulo = '', rows = [];
+  const cols = ['Fecha','Hora Evento','Categoría','Subcategoría','Acción','Equipos Involucrados','DT m³/d','Estado','Descripción'];
+
+  const hoy = new Date(); const hoyStr = `${hoy.getDate()}/${hoy.getMonth()+1}/${hoy.getFullYear()}`;
+
+  if (tipo === 'total')      { titulo = `Todos los eventos (${allData.length})`; rows = [...allData].reverse(); }
+  else if (tipo === 'hoy')   { titulo = `Eventos de hoy — ${hoyStr}`; rows = allData.filter(r=>r['Fecha']===hoyStr); }
+  else if (tipo === 'pendientes') { titulo = 'Eventos pendientes'; rows = allData.filter(r=>r['Estado']==='Pendiente'); }
+  else if (tipo === 'disparos') {
+    const esDisparoReal = r => {
+      if (r['Acción'] !== 'Disparo') return false;
+      const desc = (r['Descripción']||'').toLowerCase();
+      if (/entra.*por disparo|ingresa.*por disparo|en servicio.*por disparo|por reserva.*disparo/.test(desc)) return false;
+      return true;
+    };
+    titulo = 'Disparos TG — Histórico completo';
+    rows = allData.filter(esDisparoReal);
+  }
+  else if (tipo === 'abiertos' || tipo === 'abiertos-elect') {
+    titulo = 'Eventos eléctricos abiertos';
+    rows = getOpenEvents();
+  }
+
+  const COLORS = {
+    'Arranque':{bg:'#C6EFCE',color:'#276221'},'Paro':{bg:'#FFEB9C',color:'#7D6608'},
+    'Disparo':{bg:'#FF9999',color:'#8B0000'},'Apertura':{bg:'#F4CCCC',color:'#660000'},
+    'Cierre':{bg:'#D9EAD3',color:'#1E4620'},'Recierre':{bg:'#FCE4D6',color:'#843C0C'},
+    'Falla':{bg:'#EA9999',color:'#660000'},'Evento':{bg:'#F2F2F2',color:'#444'},
+    'Maniobra':{bg:'#CFE2F3',color:'#1F4E79'}
+  };
+
+  const tbl = rows.length ? `<table style="width:100%;border-collapse:collapse;font-size:12px">
+    <thead><tr style="background:#1F4E79;color:#fff;position:sticky;top:0">
+      ${cols.map(c=>`<th style="padding:7px 10px;text-align:left;white-space:nowrap">${c}</th>`).join('')}
+    </tr></thead>
+    <tbody>${rows.map(r=>{
+      const c = COLORS[r['Acción']]||COLORS['Evento'];
+      return `<tr style="background:${c.bg};border-bottom:1px solid #ddd">
+        <td style="padding:5px 8px;white-space:nowrap">${r['Fecha']||''}</td>
+        <td style="padding:5px 8px;white-space:nowrap">${r['Hora Evento']||''}</td>
+        <td style="padding:5px 8px;font-size:11px">${r['Categoría']||''}</td>
+        <td style="padding:5px 8px;font-size:11px">${r['Subcategoría']||''}</td>
+        <td style="padding:5px 8px"><span style="background:${c.bg};color:${c.color};border:1px solid ${c.color}40;padding:1px 7px;border-radius:10px;font-size:10px;font-weight:600">${r['Acción']||''}</span></td>
+        <td style="padding:5px 8px;font-weight:500">${r['Equipos Involucrados']||''}</td>
+        <td style="padding:5px 8px">${(() => {
+          if (r['Categoría']!=='Sistema Eléctrico') return '—';
+          const dt = getEventDT(r['Equipos Involucrados']||'');
+          if (!dt) return '<span style="color:#bbb">s/d</span>';
+          const col = dt.dt>100?'#8B0000':dt.dt>30?'#E67E22':'#27AE60';
+          return `<span style="font-weight:700;color:${col};cursor:pointer" onclick="showDTDetail('${(r['Equipos Involucrados']||'').replace(/'/g,'')}')">${dt.dt.toFixed(1)} ↗</span>`;
+        })()}</td>
+        <td style="padding:5px 8px;font-size:11px">${r['Estado']||''}</td>
+        <td style="padding:5px 8px;font-size:11px;max-width:300px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${(r['Descripción']||'').replace(/"/g,'&quot;')}">${r['Descripción']||''}</td>
+      </tr>`;
+    }).join('')}</tbody>
+  </table>` : '<div style="padding:20px;color:#999;text-align:center">Sin resultados</div>';
+
+  let modal = document.getElementById('modal-interactivo');
+  if (!modal) {
+    modal = document.createElement('div');
+    modal.id = 'modal-interactivo';
+    modal.style.cssText = 'display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:2000;align-items:flex-start;justify-content:center;padding-top:40px;overflow-y:auto';
+    modal.onclick = e => { if (e.target===modal) modal.style.display='none'; };
+    document.body.appendChild(modal);
+  }
+  modal.innerHTML = `
+    <div style="background:#fff;border-radius:10px;padding:20px;max-width:1100px;width:96vw;max-height:85vh;overflow-y:auto">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;border-bottom:1px solid #e0e0e0;padding-bottom:10px">
+        <div style="font-size:15px;font-weight:700;color:#1F4E79">${titulo} — ${rows.length} registros</div>
+        <button onclick="document.getElementById('modal-interactivo').style.display='none'" style="border:none;background:#f0f4f8;border-radius:6px;padding:6px 14px;cursor:pointer;font-size:13px;font-weight:600">✕ Cerrar</button>
+      </div>
+      <div style="overflow-x:auto">${tbl}</div>
+    </div>`;
+  modal.style.display = 'flex';
+}
+
+function getOpenEvents() {
+  const electricos = allData.filter(r => r['Categoría'] === 'Sistema Eléctrico');
+  const toISO = r => {
+    const parts = (r['Fecha']||'').split('/');
+    if (parts.length !== 3) return '';
+    return `${parts[2]}-${parts[1].padStart(2,'0')}-${parts[0].padStart(2,'0')}T${(r['Hora Evento']||r['Hora Mensaje']||'00:00').replace('.',':')}`;
+  };
+  const hace60 = new Date(); hace60.setDate(hace60.getDate()-60);
+  const iso60 = hace60.toISOString().substring(0,10);
+  const abiertos = electricos.filter(r => {
+    if (!['Apertura','Falla'].includes(r['Acción'])) return false;
+    const eq = (r['Equipos Involucrados']||'').trim();
+    if (!eq) return false;
+    return toISO(r) >= iso60;
+  });
+  const cierres = electricos.filter(r =>
+    r['Acción']==='Cierre' || r['Acción']==='Recierre' || r['Estado']==='Resuelto' || r['Estado']==='Recierre'
+  );
+  return abiertos.filter(ev => {
+    const equipos = (ev['Equipos Involucrados']||'').split(',').map(e=>e.trim()).filter(Boolean);
+    const tsEv = toISO(ev);
+    return !cierres.some(c => {
+      const tsCierre = toISO(c);
+      if (tsCierre <= tsEv) return false;
+      const eqC = (c['Equipos Involucrados']||'').split(',').map(e=>e.trim());
+      const desc = (c['Descripción']||'').toLowerCase();
+      return equipos.some(eq => eqC.some(ec=>ec===eq||ec.includes(eq)||eq.includes(ec)) || desc.includes(eq.toLowerCase()));
+    });
+  }).slice(0,15);
+}
+
+function renderOpenEvents() {
+  // No longer renders to DOM - data is accessed via getOpenEvents()
+  // Called for compatibility but does nothing visible
+}
+
+let msjRankingPeriodo = 'historico'; // 'semana' | 'mes' | 'historico'
+
+function renderMachineStats(esDisparoRealFn) {
+  const gen = allData.filter(r => r['Categoría']==='Generación' && r['Subcategoría']==='TG' && (r['Equipos Involucrados']||'').trim());
+
+  // Disparo real: Acción=Disparo Y la descripción habla del propio disparo, no de que ENTRA por disparo de otra
+  const esDisparoReal = esDisparoRealFn || (r => {
+    if (r['Acción'] !== 'Disparo') return false;
+    const desc = (r['Descripción']||'').toLowerCase();
+    // Excluir: "ingresa/entra en servicio ... debido al/por disparo de TGxx" → es un ARRANQUE
+    if (/(?:ingresa|entra)(?:\s+en\s+servicio)?.*(?:debido\s+al?|por)\s+disparo/.test(desc)) return false;
+    if (/entra.*por disparo|ingresa.*por disparo|en servicio.*por disparo|por reserva.*disparo/.test(desc)) return false;
+    return true;
+  });
+
+  // Arranque real: Acción=Arranque O (Acción=Disparo con patrón "entra por disparo de")
+  const esArranqueReal = r => {
+    if (r['Acción'] === 'Arranque') return true;
+    if (r['Acción'] === 'Disparo') {
+      const desc = (r['Descripción']||'').toLowerCase();
+      if (/(?:ingresa|entra)(?:\s+en\s+servicio)?.*(?:debido\s+al?|por)\s+disparo/.test(desc)) return true;
+    }
+    return false;
+  };
+
+  const toISODate = r => {
+    const p = (r['Fecha']||'').split('/');
+    return p.length===3 ? `${p[2]}-${p[1].padStart(2,'0')}-${p[0].padStart(2,'0')}` : '';
+  };
+
+  const now = new Date();
+  const iso7  = new Date(now); iso7.setDate(now.getDate()-7);   const s7  = iso7.toISOString().substring(0,10);
+  const iso30 = new Date(now); iso30.setDate(now.getDate()-30); const s30 = iso30.toISOString().substring(0,10);
+
+  const filtrarPeriodo = rows => {
+    if (msjRankingPeriodo === 'semana') return rows.filter(r => toISODate(r) >= s7);
+    if (msjRankingPeriodo === 'mes')    return rows.filter(r => toISODate(r) >= s30);
+    return rows;
+  };
+
+  const genFilt = filtrarPeriodo(gen);
+
+  // Ranking arranques separado de disparos
+  const tgArr = {}, tgDisp = {};
+  genFilt.forEach(r => {
+    (r['Equipos Involucrados']||'').split(',').forEach(eq => {
+      eq = eq.trim(); if (!eq) return;
+      if (esArranqueReal(r)) tgArr[eq]  = (tgArr[eq]||0)+1;
+      if (esDisparoReal(r))  tgDisp[eq] = (tgDisp[eq]||0)+1;
+    });
+  });
+
+  const topArr  = Object.entries(tgArr).sort((a,b)=>b[1]-a[1]).slice(0,10);
+  const topDisp = Object.entries(tgDisp).sort((a,b)=>b[1]-a[1]).slice(0,10);
+  const allDisparos = gen.filter(esDisparoReal);
+  const lastTG = gen.filter(r => esArranqueReal(r) || r['Acción']==='Paro' || esDisparoReal(r)).slice(-10).reverse();
+
+  const periodoLabel = msjRankingPeriodo==='semana' ? 'Última semana' : msjRankingPeriodo==='mes' ? 'Último mes' : 'Histórico';
+  const btnStyle = active => `padding:4px 12px;border-radius:5px;font-size:11px;font-weight:600;cursor:pointer;border:1px solid #d0dce8;background:${active?'#1F4E79':'#fff'};color:${active?'#fff':'#555'}`;
+
+  const topArrHTML = topArr.length ? topArr.map(([tg, cnt]) => {
+    const max = topArr[0][1]||1;
+    return `<div style="margin-bottom:8px;cursor:pointer;padding:3px;border-radius:4px" onmouseover="this.style.background='#f5f8ff'" onmouseout="this.style.background=''" onclick="showTGDetail('${tg}')">
+      <div style="display:flex;justify-content:space-between;margin-bottom:3px;font-size:12px">
+        <span style="font-weight:600;color:#1F4E79">${tg}</span>
+        <span style="color:#276221;font-weight:500">${cnt} arranques</span>
+      </div>
+      <div class="barra-wrap"><div class="barra" style="width:${Math.round(cnt/max*100)}%;background:#27AE60"></div></div>
+    </div>`;
+  }).join('') : '<div class="no-data">Sin datos</div>';
+
+  const topDispHTML = topDisp.length ? topDisp.map(([tg, cnt]) => {
+    const max = topDisp[0][1]||1;
+    return `<div style="margin-bottom:8px;cursor:pointer;padding:3px;border-radius:4px" onmouseover="this.style.background='#fff5f5'" onmouseout="this.style.background=''" onclick="showTGDetail('${tg}')">
+      <div style="display:flex;justify-content:space-between;margin-bottom:3px;font-size:12px">
+        <span style="font-weight:600;color:#8B0000">${tg}</span>
+        <span style="color:#C0392B;font-weight:500">${cnt} disparos</span>
+      </div>
+      <div class="barra-wrap"><div class="barra" style="width:${Math.round(cnt/max*100)}%;background:#C0392B"></div></div>
+    </div>`;
+  }).join('') : '<div class="no-data">Sin disparos</div>';
+
+  const lastHTML = lastTG.length ? `<table class="mini-table">` +
+    lastTG.map(r => {
+      const c = esDisparoReal(r)  ? {bg:'#FF9999',color:'#8B0000'} :
+                r['Acción']==='Arranque' || esArranqueReal(r) ? {bg:'#C6EFCE',color:'#276221'} :
+                                           {bg:'#FFEB9C',color:'#7D6608'};
+      const etiq = esDisparoReal(r) ? 'Disparo' : esArranqueReal(r) ? 'Arranque' : r['Acción'];
+      const tg0 = (r['Equipos Involucrados']||'').split(',')[0].trim();
+      return `<tr style="cursor:pointer" onclick="showTGDetail('${tg0}')">
+        <td><span class="badge" style="background:${c.bg};color:${c.color}">${etiq}</span></td>
+        <td style="font-weight:500">${r['Equipos Involucrados']}</td>
+        <td style="color:#666;font-size:11px">${r['Fecha']} ${r['Hora Evento']||''}</td>
+        <td style="color:#888;font-size:11px;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${(r['Descripción']||'').substring(0,60)}</td>
+      </tr>`;
+    }).join('') + `</table>` : '<div class="no-data">Sin datos</div>';
+
+  const disparosHTML = allDisparos.length ? `<table class="mini-table" style="width:100%">
+    <thead><tr style="background:#1F4E79;color:#fff">
+      <th style="padding:6px 8px">Fecha</th><th style="padding:6px 8px">Hora</th>
+      <th style="padding:6px 8px">Equipo</th><th style="padding:6px 8px">Descripción</th>
+    </tr></thead>` +
+    allDisparos.map(r => {
+      const tg0 = (r['Equipos Involucrados']||'').split(',')[0].trim();
+      return `<tr style="background:#FFF5F5;border-bottom:1px solid #FFD0D0;cursor:pointer" onclick="showTGDetail('${tg0}')">
+        <td style="padding:5px 8px;font-weight:600;color:#8B0000">${r['Fecha']}</td>
+        <td style="padding:5px 8px">${r['Hora Evento']||''}</td>
+        <td style="padding:5px 8px;font-weight:600">${r['Equipos Involucrados']||''}</td>
+        <td style="padding:5px 8px;font-size:11px">${(r['Descripción']||'').substring(0,150)}</td>
+      </tr>`;
+    }).join('') + `</table>` : '<div class="no-data">Sin disparos</div>';
+
+  const tgTabActive = window._tgTab || 'arranques';
+
+  document.getElementById('machine-stats').innerHTML = `
+    <div style="display:flex;gap:10px;margin-bottom:12px;flex-wrap:wrap;align-items:center">
+      <div class="card red" style="flex:0 0 160px;padding:10px 14px;cursor:pointer" onclick="document.getElementById('modal-disparos').style.display='flex'">
+        <div class="label">Disparos TG total</div>
+        <div class="value" style="font-size:22px">${allDisparos.length}</div>
+        <div class="sub" style="color:#2E75B6;font-weight:600">Ver todos →</div>
+      </div>
+      <div class="card amber" style="flex:0 0 160px;padding:10px 14px;cursor:pointer" onclick="showModal('abiertos-elect')">
+        <div class="label">Eventos eléctricos abiertos</div>
+        <div class="value" style="font-size:22px">${getOpenEvents().length}</div>
+        <div class="sub" style="color:#E67E22;font-weight:600">Ver abiertos →</div>
+      </div>
+      <div style="display:flex;gap:6px;align-items:center;margin-left:auto">
+        <button style="${btnStyle(msjRankingPeriodo==='semana')}" onclick="msjRankingPeriodo='semana';renderMachineStats()">Última semana</button>
+        <button style="${btnStyle(msjRankingPeriodo==='mes')}"    onclick="msjRankingPeriodo='mes';renderMachineStats()">Último mes</button>
+        <button style="${btnStyle(msjRankingPeriodo==='historico')}" onclick="msjRankingPeriodo='historico';renderMachineStats()">Histórico</button>
+      </div>
+    </div>
+
+    <div style="display:flex;gap:6px;margin-bottom:10px">
+      <button style="padding:6px 16px;border-radius:6px 6px 0 0;font-size:12px;font-weight:600;cursor:pointer;border:1px solid #d0dce8;border-bottom:none;background:${tgTabActive==='arranques'?'#1F4E79':'#f0f4f8'};color:${tgTabActive==='arranques'?'#fff':'#555'}" onclick="window._tgTab='arranques';renderMachineStats()">Ranking arranques</button>
+      <button style="padding:6px 16px;border-radius:6px 6px 0 0;font-size:12px;font-weight:600;cursor:pointer;border:1px solid #d0dce8;border-bottom:none;background:${tgTabActive==='disparos'?'#8B0000':'#f0f4f8'};color:${tgTabActive==='disparos'?'#fff':'#555'}" onclick="window._tgTab='disparos';renderMachineStats()">Ranking disparos</button>
+      <button style="padding:6px 16px;border-radius:6px 6px 0 0;font-size:12px;font-weight:600;cursor:pointer;border:1px solid #d0dce8;border-bottom:none;background:${tgTabActive==='eventos'?'#276221':'#f0f4f8'};color:${tgTabActive==='eventos'?'#fff':'#555'}" onclick="window._tgTab='eventos';renderMachineStats()">Últimos eventos</button>
+    </div>
+
+    <div style="background:#fff;border-radius:0 8px 8px 8px;border:1px solid #d0dce8;padding:14px;min-height:200px">
+      ${tgTabActive==='arranques' ? topArrHTML : tgTabActive==='disparos' ? topDispHTML : lastHTML}
+    </div>
+
+    <div id="modal-disparos" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:1000;align-items:flex-start;justify-content:center;padding-top:40px" onclick="if(event.target===this)this.style.display='none'">
+      <div style="background:#fff;border-radius:10px;padding:20px;max-width:900px;width:95vw;max-height:80vh;overflow-y:auto">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+          <div style="font-size:15px;font-weight:700;color:#8B0000">Disparos TG reales — ${allDisparos.length} registros</div>
+          <button onclick="document.getElementById('modal-disparos').style.display='none'" style="border:none;background:#f0f4f8;border-radius:6px;padding:6px 12px;cursor:pointer;font-size:13px;font-weight:600">✕ Cerrar</button>
+        </div>
+        <div style="overflow-x:auto">${disparosHTML}</div>
+      </div>
+    </div>
+  `;
+}
+function showTGDetail(tg) {
+  if (!tg) return;
+  const rows = allData.filter(r =>
+    r['Categoría']==='Generación' && r['Subcategoría']==='TG' &&
+    (r['Equipos Involucrados']||'').split(',').map(e=>e.trim()).includes(tg)
+  ).reverse();
+  const COLORS = {'Arranque':{bg:'#C6EFCE',color:'#276221'},'Paro':{bg:'#FFEB9C',color:'#7D6608'},'Disparo':{bg:'#FF9999',color:'#8B0000'}};
+  const arr = rows.filter(r=>r['Acción']==='Arranque').length;
+  const par = rows.filter(r=>r['Acción']==='Paro').length;
+  const dis = rows.filter(r=>r['Acción']==='Disparo').length;
+  const tbl = `
+    <div style="display:flex;gap:12px;margin-bottom:14px;flex-wrap:wrap">
+      <div style="background:#C6EFCE;border-radius:7px;padding:10px 18px;text-align:center"><div style="font-size:11px;color:#276221">Arranques</div><div style="font-size:22px;font-weight:700;color:#276221">${arr}</div></div>
+      <div style="background:#FFEB9C;border-radius:7px;padding:10px 18px;text-align:center"><div style="font-size:11px;color:#7D6608">Paros</div><div style="font-size:22px;font-weight:700;color:#7D6608">${par}</div></div>
+      <div style="background:#FF9999;border-radius:7px;padding:10px 18px;text-align:center"><div style="font-size:11px;color:#8B0000">Disparos</div><div style="font-size:22px;font-weight:700;color:#8B0000">${dis}</div></div>
+    </div>
+    <table style="width:100%;border-collapse:collapse;font-size:12px">
+      <thead><tr style="background:#1F4E79;color:#fff;position:sticky;top:0">
+        <th style="padding:7px 10px">Fecha</th><th style="padding:7px 10px">Hora</th><th style="padding:7px 10px">Acción</th><th style="padding:7px 10px">Descripción</th>
+      </tr></thead>
+      <tbody>${rows.map(r=>{const c=COLORS[r['Acción']]||{bg:'#f5f5f5',color:'#444'};return `<tr style="background:${c.bg};border-bottom:1px solid #ddd"><td style="padding:5px 10px;white-space:nowrap">${r['Fecha']}</td><td style="padding:5px 10px;white-space:nowrap">${r['Hora Evento']||''}</td><td style="padding:5px 10px;color:${c.color};font-weight:600">${r['Acción']}</td><td style="padding:5px 10px;font-size:11px">${r['Descripción']||''}</td></tr>`;}).join('')}</tbody>
+    </table>`;
+  let modal = document.getElementById('modal-interactivo');
+  if (!modal) { modal=document.createElement('div'); modal.id='modal-interactivo'; modal.style.cssText='display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:2000;align-items:flex-start;justify-content:center;padding-top:40px;overflow-y:auto'; modal.onclick=e=>{if(e.target===modal)modal.style.display='none';}; document.body.appendChild(modal); }
+  modal.innerHTML = `<div style="background:#fff;border-radius:10px;padding:20px;max-width:900px;width:96vw;max-height:85vh;overflow-y:auto">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;border-bottom:1px solid #e0e0e0;padding-bottom:10px">
+      <div style="font-size:16px;font-weight:700;color:#1F4E79">${tg} — ${rows.length} eventos</div>
+      <button onclick="document.getElementById('modal-interactivo').style.display='none'" style="border:none;background:#f0f4f8;border-radius:6px;padding:6px 14px;cursor:pointer;font-size:13px;font-weight:600">✕ Cerrar</button>
+    </div>${tbl}</div>`;
+  modal.style.display='flex';
+}
+
+
+function renderAlertas() {
+  const disparosHoy = allData.filter(r => {
+    const hoy = new Date(); const hoyStr = `${hoy.getDate()}/${hoy.getMonth()+1}/${hoy.getFullYear()}`;
+    return r['Fecha'] === hoyStr && r['Acción'] === 'Disparo';
+  });
+  const container = document.getElementById('alertas');
+  if (disparosHoy.length) {
+    container.innerHTML = `<div class="alerta-banner">
+      ALERTA: ${disparosHoy.length} disparo(s) registrado(s) hoy —
+      ${disparosHoy.map(r => r['Equipos Involucrados'] || r['Subcategoría']).join(', ')}
+    </div>`;
+  } else {
+    container.innerHTML = '';
+  }
+}
+
+function renderTable() {
+  const start = currentPage * PAGE_SIZE;
+  const page  = filtered.slice(start, start + PAGE_SIZE);
+  const tbody = document.getElementById('table-body');
+
+  if (!page.length) {
+    tbody.innerHTML = `<tr><td colspan="9" class="no-data">Sin resultados</td></tr>`;
+  } else {
+    tbody.innerHTML = page.map(r => {
+      const c = COLOR_MAP[r['Acción']] || COLOR_MAP['Evento'];
+      const isDisparo = r['Acción'] === 'Disparo';
+      return `<tr style="background:${c.bg}">
+        <td style="color:${isDisparo?'#8B0000':'inherit'};font-weight:${isDisparo?'600':'400'}">${r['Fecha']||''}</td>
+        <td>${r['Hora Evento']||r['Hora Mensaje']||''}</td>
+        <td style="font-size:11px">${(r['Remitente']||'').substring(0,22)}</td>
+        <td><span style="font-size:11px;color:${c.color}">${r['Categoría']||''}</span></td>
+        <td><span style="font-size:11px">${r['Subcategoría']||''}</span></td>
+        <td><span class="badge" style="background:${c.bg};color:${c.color};border:1px solid ${c.color}40">${r['Acción']||''}</span></td>
+        <td style="font-size:11px;font-weight:500">${r['Equipos Involucrados']||''}</td>
+        <td>${(() => {
+          if (r['Categoría'] !== 'Sistema Eléctrico') return '<span style="font-size:10px;color:#ccc">—</span>';
+          const dtResult = getEventDT(r['Equipos Involucrados']||'');
+          if (!dtResult) return '<span style="font-size:10px;color:#bbb">s/d</span>';
+          const color = dtResult.dt > 100 ? '#8B0000' : dtResult.dt > 30 ? '#E67E22' : '#27AE60';
+          return `<span style="font-size:11px;font-weight:700;color:${color};cursor:pointer;text-decoration:underline dotted" onclick="showDTDetail('${(r['Equipos Involucrados']||'').replace(/'/g,'')}')" title="Ver detalle DT">${dtResult.dt.toFixed(1)}</span>`;
+        })()}</td>
+        <td>${(() => {
+          const est = r['Estado']||'';
+          const editable = ['Pendiente','En curso','Resuelto'].includes(est) || est==='';
+          if (editable || r['Categoría']==='Sistema Eléctrico') {
+            const opts = ['Pendiente','En curso','Resuelto','Recierre','No corresponde'];
+            return `<select class="status-select" onchange="updateStatus(this,'${r['Fecha']}','${r['Hora Evento']}')">
+              ${opts.map(s=>`<option${est===s?' selected':''}>${s}</option>`).join('')}
+            </select>`;
+          }
+          const colors = {'No corresponde':'#888','Recierre':'#843C0C','Resuelto':'#1E4620','Pendiente':'#7D5A00'};
+          return `<span style="font-size:11px;color:${colors[est]||'#666'}">${est}</span>`;
+        })()}</td>
+        <td class="desc-cell" title="${(r['Descripción']||'').replace(/"/g,'&quot;')}">${r['Descripción']||''}</td>
+      </tr>`;
+    }).join('');
+  }
+
+  const total = filtered.length;
+  document.getElementById('pag-info').textContent =
+    `${start+1}–${Math.min(start+PAGE_SIZE, total)} de ${total} eventos`;
+  document.getElementById('btn-prev').disabled = currentPage === 0;
+  document.getElementById('btn-next').disabled = start + PAGE_SIZE >= total;
+}
+
+function changePage(dir) {
+  currentPage += dir;
+  renderTable();
+  window.scrollTo(0, document.querySelector('.table-wrap').offsetTop - 20);
+}
+
+// Row number cache: maps (fecha+hora) → 1-based row number in sheet (header=row1, data starts row2)
+const rowNumCache = {};
+
+function buildRowNumCache() {
+  allData.forEach((r, i) => {
+    rowNumCache[r['Fecha'] + '|' + (r['Hora Evento']||'')] = i + 2;
+  });
+}
+
+// ── URL del Apps Script Web App ───────────────────────────────────────────────
+// Completar con la URL de tu web app una vez desplegada
+let APPS_SCRIPT_URL = localStorage.getItem('pae_apps_script_url') || '';
+
+function setAppsScriptUrl(url) {
+  APPS_SCRIPT_URL = url.trim();
+  localStorage.setItem('pae_apps_script_url', APPS_SCRIPT_URL);
+  document.getElementById('apps-script-status').textContent = '✓ URL guardada';
+  document.getElementById('apps-script-status').style.color = '#27AE60';
+  setTimeout(() => document.getElementById('apps-script-modal').style.display='none', 1200);
+}
+
+function showAppsScriptConfig() {
+  let modal = document.getElementById('apps-script-modal');
+  if (!modal) {
+    modal = document.createElement('div');
+    modal.id = 'apps-script-modal';
+    modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:3000;display:flex;align-items:center;justify-content:center';
+    modal.innerHTML = `
+      <div style="background:#fff;border-radius:10px;padding:24px;max-width:600px;width:94vw">
+        <div style="font-size:15px;font-weight:700;color:#1F4E79;margin-bottom:8px">Configurar Apps Script</div>
+        <div style="font-size:12px;color:#666;margin-bottom:14px;line-height:1.6">
+          Pegá la URL del Web App de Google Apps Script para que los cambios de estado se escriban directamente en Google Sheets.
+        </div>
+        <input id="apps-script-url-input" type="text" placeholder="https://script.google.com/macros/s/.../exec"
+          value="${APPS_SCRIPT_URL}"
+          style="width:100%;border:1px solid #d0dce8;border-radius:6px;padding:9px 12px;font-size:13px;margin-bottom:10px;box-sizing:border-box">
+        <div style="display:flex;gap:8px;justify-content:flex-end">
+          <button onclick="document.getElementById('apps-script-modal').style.display='none'" style="border:1px solid #d0dce8;background:#f5f5f5;border-radius:6px;padding:7px 16px;cursor:pointer;font-size:12px">Cancelar</button>
+          <button onclick="setAppsScriptUrl(document.getElementById('apps-script-url-input').value)" style="border:none;background:#1F4E79;color:#fff;border-radius:6px;padding:7px 16px;cursor:pointer;font-size:12px;font-weight:600">Guardar</button>
+        </div>
+        <div id="apps-script-status" style="font-size:11px;margin-top:8px;height:16px"></div>
+      </div>`;
+    document.body.appendChild(modal);
+  } else {
+    document.getElementById('apps-script-url-input').value = APPS_SCRIPT_URL;
+    modal.style.display = 'flex';
+  }
+}
+
+async function updateStatus(sel, fecha, hora) {
+  const row = allData.find(r => r['Fecha'] === fecha && r['Hora Evento'] === hora);
+  if (!row) return;
+
+  row['Estado'] = sel.value;
+  renderCards();
+  renderAlertas();
+
+  // Visual: loading
+  sel.style.background = '#FFF9C4';
+  sel.disabled = true;
+
+  // Guardar en localStorage siempre (fallback)
+  const pendingKey = 'pae_pending_states';
+  let pending = {};
+  try { pending = JSON.parse(localStorage.getItem(pendingKey)||'{}'); } catch(e) {}
+  pending[fecha + '|' + hora] = sel.value;
+  try { localStorage.setItem(pendingKey, JSON.stringify(pending)); } catch(e) {}
+
+  if (!APPS_SCRIPT_URL) {
+    // Sin Apps Script configurado
+    sel.disabled = false;
+    sel.style.background = '#FFF3CD';
+    sel.title = 'Guardado localmente. Configurá Apps Script para sincronizar con Sheets.';
+    // Mostrar aviso una vez
+    if (!window._appsScriptWarned) {
+      window._appsScriptWarned = true;
+      const toast = document.createElement('div');
+      toast.style.cssText = 'position:fixed;bottom:20px;right:20px;background:#1F4E79;color:#fff;padding:12px 18px;border-radius:8px;font-size:12px;z-index:5000;max-width:320px;line-height:1.5';
+      toast.innerHTML = `Cambio guardado localmente.<br><a onclick="showAppsScriptConfig()" style="color:#7dd3fc;cursor:pointer;text-decoration:underline">Configurar Apps Script</a> para sincronizar con Sheets.`;
+      document.body.appendChild(toast);
+      setTimeout(() => toast.remove(), 5000);
+    }
+    return;
+  }
+
+  try {
+    const resp = await fetch(APPS_SCRIPT_URL, {
+      method: 'POST',
+      body: JSON.stringify({ fecha, hora, estado: sel.value }),
+      headers: { 'Content-Type': 'text/plain' } // Apps Script requiere text/plain para evitar preflight
+    });
+    const result = await resp.json();
+
+    if (result.ok) {
+      sel.style.background = '#E8F5E9';
+      sel.title = 'Guardado en Google Sheets ✓';
+      // Borrar del pending local
+      delete pending[fecha + '|' + hora];
+      try { localStorage.setItem(pendingKey, JSON.stringify(pending)); } catch(e) {}
+      // Toast éxito
+      showToast('✓ Estado actualizado en Google Sheets', '#27AE60');
+    } else {
+      sel.style.background = '#FFECEC';
+      sel.title = `Error: ${result.error || result.row}`;
+      showToast('⚠ No se encontró la fila en Sheets', '#E67E22');
+    }
+  } catch (err) {
+    sel.style.background = '#FFF3CD';
+    sel.title = 'Error de conexión — guardado localmente';
+    showToast('Sin conexión con Apps Script — guardado local', '#E67E22');
+  }
+
+  sel.disabled = false;
+}
+
+function showToast(msg, color) {
+  const t = document.createElement('div');
+  t.style.cssText = `position:fixed;bottom:20px;right:20px;background:${color};color:#fff;padding:10px 16px;border-radius:8px;font-size:12px;font-weight:600;z-index:5000;box-shadow:0 2px 8px rgba(0,0,0,0.2)`;
+  t.textContent = msg;
+  document.body.appendChild(t);
+  setTimeout(() => t.remove(), 3000);
+}
+
+function applyPendingStates() {
+  let pending = {};
+  try { pending = JSON.parse(localStorage.getItem('pae_pending_states')||'{}'); } catch(e) {}
+  Object.entries(pending).forEach(([key, estado]) => {
+    const [fecha, hora] = key.split('|');
+    const row = allData.find(r => r['Fecha']===fecha && r['Hora Evento']===hora);
+    if (row) row['Estado'] = estado;
+  });
+}
+
+function showDTDetail(equipos_str) {
+  const equipos = equipos_str.split(',').map(e=>e.trim()).filter(Boolean);
+  let html = '';
+
+  equipos.forEach(eq => {
+    const r = getDT(eq);
+    if (!r) { html += `<div style="color:#999;padding:8px">Sin datos de red para: ${eq}</div>`; return; }
+
+    const colorDT = r.dt > 100 ? '#8B0000' : r.dt > 30 ? '#E67E22' : '#27AE60';
+
+    if (r.nivel === 'Alimentador' && r.info) {
+      const recs = r.info.reconectadores || [];
+      html += `
+        <div style="margin-bottom:16px">
+          <div style="font-size:14px;font-weight:700;color:#1F4E79;margin-bottom:6px">Alimentador: ${eq}</div>
+          <div style="display:flex;gap:10px;margin-bottom:10px;flex-wrap:wrap">
+            <div style="background:#FEF3C7;border-radius:7px;padding:10px 16px;text-align:center">
+              <div style="font-size:10px;color:#92400E;margin-bottom:2px">DT TOTAL</div>
+              <div style="font-size:20px;font-weight:800;color:${colorDT}">${r.dt.toFixed(1)}</div>
+              <div style="font-size:10px;color:#92400E">m³/día</div>
+            </div>
+            <div style="background:#EFF6FF;border-radius:7px;padding:10px 16px">
+              <div style="font-size:10px;color:#1D4ED8;margin-bottom:4px">RECONECTADORES AGUAS ABAJO</div>
+              <div style="font-size:12px;font-weight:600">${recs.join(' · ')}</div>
+            </div>
+          </div>
+          <table style="width:100%;border-collapse:collapse;font-size:12px">
+            <thead><tr style="background:#1F4E79;color:#fff">
+              <th style="padding:6px 8px;text-align:left">Reconectador</th>
+              <th style="padding:6px 8px;text-align:right">DT m³/d</th>
+              <th style="padding:6px 8px;text-align:center">Pozos</th>
+            </tr></thead>
+            <tbody>${recs.map(rec => {
+              const ri = RED.rec_info[rec];
+              if (!ri) return '';
+              const seccs = Object.entries(ri.seccionadores||{});
+              return `<tr style="border-bottom:1px solid #e8edf2;cursor:pointer" onclick="this.nextElementSibling && (this.nextElementSibling.style.display=this.nextElementSibling.style.display==='none'?'':'none')">
+                <td style="padding:5px 8px;font-weight:600;color:#1F4E79">${rec}</td>
+                <td style="padding:5px 8px;text-align:right;font-weight:700;color:${ri.dt>50?'#8B0000':ri.dt>20?'#E67E22':'#27AE60'}">${ri.dt.toFixed(1)}</td>
+                <td style="padding:5px 8px;text-align:center;color:#666">${Object.values(ri.seccionadores||{}).reduce((s,v)=>s+v.count,0)}</td>
+              </tr>
+              ${seccs.map(([secc,sd]) => `
+                <tr style="display:none;background:#f8fafc;border-bottom:1px solid #f0f4f8">
+                  <td style="padding:4px 8px 4px 24px;color:#555;font-size:11px">${secc}</td>
+                  <td style="padding:4px 8px;text-align:right;font-size:11px;color:#666">${sd.dt.toFixed(1)}</td>
+                  <td style="padding:4px 8px;text-align:center;font-size:11px;color:#888">${sd.count} inst.</td>
+                </tr>`).join('')}`;
+            }).join('')}</tbody>
+          </table>
+        </div>`;
+
+    } else if (r.nivel === 'Reconectador' && r.info) {
+      const seccs = Object.entries(r.info.seccionadores||{});
+      html += `
+        <div style="margin-bottom:16px">
+          <div style="font-size:14px;font-weight:700;color:#1F4E79;margin-bottom:6px">Reconectador: ${eq}</div>
+          <div style="display:flex;gap:10px;margin-bottom:10px;flex-wrap:wrap">
+            <div style="background:#FEF3C7;border-radius:7px;padding:10px 16px;text-align:center">
+              <div style="font-size:10px;color:#92400E;margin-bottom:2px">DT TOTAL</div>
+              <div style="font-size:20px;font-weight:800;color:${colorDT}">${r.dt.toFixed(1)}</div>
+              <div style="font-size:10px;color:#92400E">m³/día</div>
+            </div>
+            <div style="background:#EFF6FF;border-radius:7px;padding:10px 16px">
+              <div style="font-size:10px;color:#1D4ED8;margin-bottom:2px">ALIMENTADOR</div>
+              <div style="font-size:12px;font-weight:600">${r.info.alimentador}</div>
+              <div style="font-size:10px;color:#1D4ED8;margin-top:4px">SET</div>
+              <div style="font-size:12px;font-weight:600">${r.info.set}</div>
+            </div>
+          </div>
+          <table style="width:100%;border-collapse:collapse;font-size:12px">
+            <thead><tr style="background:#1F4E79;color:#fff">
+              <th style="padding:6px 8px;text-align:left">Seccionador</th>
+              <th style="padding:6px 8px;text-align:right">DT m³/d</th>
+              <th style="padding:6px 8px;text-align:center">Instalaciones</th>
+              <th style="padding:6px 8px;text-align:left">Detalle</th>
+            </tr></thead>
+            <tbody>${seccs.map(([secc, sd]) => `
+              <tr style="border-bottom:1px solid #e8edf2">
+                <td style="padding:5px 8px;font-weight:600;color:#555">${secc}</td>
+                <td style="padding:5px 8px;text-align:right;font-weight:700;color:${sd.dt>50?'#8B0000':sd.dt>20?'#E67E22':'#27AE60'}">${sd.dt.toFixed(1)}</td>
+                <td style="padding:5px 8px;text-align:center">${sd.count}</td>
+                <td style="padding:5px 8px;font-size:10px;color:#888;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${sd.instalaciones.slice(0,8).join(', ')}${sd.instalaciones.length>8?'...':''}</td>
+              </tr>`).join('')}
+            </tbody>
+          </table>
+        </div>`;
+
+    } else if (r.nivel === 'Seccionador') {
+      html += `
+        <div style="margin-bottom:16px">
+          <div style="font-size:14px;font-weight:700;color:#1F4E79;margin-bottom:8px">Seccionador: ${eq}</div>
+          <div style="background:#FEF3C7;border-radius:7px;padding:10px 16px;display:inline-block;text-align:center">
+            <div style="font-size:10px;color:#92400E;margin-bottom:2px">DT</div>
+            <div style="font-size:20px;font-weight:800;color:${colorDT}">${r.dt.toFixed(1)}</div>
+            <div style="font-size:10px;color:#92400E">m³/día</div>
+          </div>
+        </div>`;
+    }
+  });
+
+  if (!html) html = '<div style="color:#999;padding:20px;text-align:center">No se encontraron datos de red para los equipos involucrados</div>';
+
+  let modal = document.getElementById('modal-dt');
+  if (!modal) {
+    modal = document.createElement('div');
+    modal.id = 'modal-dt';
+    modal.style.cssText = 'display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:3000;align-items:flex-start;justify-content:center;padding-top:40px;overflow-y:auto';
+    modal.onclick = e => { if(e.target===modal) modal.style.display='none'; };
+    document.body.appendChild(modal);
+  }
+  modal.innerHTML = `
+    <div style="background:#fff;border-radius:10px;padding:20px;max-width:900px;width:96vw;max-height:85vh;overflow-y:auto">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;border-bottom:1px solid #e0e0e0;padding-bottom:10px">
+        <div>
+          <div style="font-size:15px;font-weight:700;color:#1F4E79">Downtime eléctrico</div>
+          <div style="font-size:11px;color:#666;margin-top:2px">Equipos: ${equipos_str} · Instalaciones aguas abajo</div>
+        </div>
+        <button onclick="document.getElementById('modal-dt').style.display='none'" style="border:none;background:#f0f4f8;border-radius:6px;padding:6px 14px;cursor:pointer;font-size:13px;font-weight:600">✕</button>
+      </div>
+      ${html}
+      <div style="font-size:10px;color:#bbb;margin-top:12px;border-top:1px solid #f0f0f0;padding-top:8px">DT basado en datos de ensayo de producción. Clic en reconectadores para ver/ocultar seccionadores.</div>
+    </div>`;
+  modal.style.display = 'flex';
+}
+
+function sortBy(col) {
+  if (sortCol === col) sortAsc = !sortAsc;
+  else { sortCol = col; sortAsc = true; }
+  filtered.sort((a,b) => {
+    const av = a[col]||'', bv = b[col]||'';
+    return sortAsc ? av.localeCompare(bv) : bv.localeCompare(av);
+  });
+  renderTable();
+}
+
+setInterval(loadData, 60000);
+loadData();
+</script>
+</div><!-- /section-novedades -->
+<!-- SECCIÓN MANIOBRAS MDJ -->
+<div id="section-maniobras" style="display:none">
+<style>
+.mdj2{font-family:'Segoe UI',Arial,sans-serif;background:#f0f4f8;min-height:100vh;padding:16px 20px;color:#1a2332}
+.mdj2-header{background:#1F4E79;color:#fff;padding:12px 18px;border-radius:8px;display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:8px}
+.mdj2-kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-bottom:14px}
+.mdj2-kpi{background:#fff;border-radius:8px;padding:12px 14px;border-left:3px solid #2E75B6}
+.mdj2-kpi .lbl{font-size:10px;color:#666;text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px}
+.mdj2-kpi .val{font-size:22px;font-weight:700;color:#1F4E79;line-height:1}
+.mdj2-kpi .sub{font-size:10px;color:#888;margin-top:3px}
+.mdj2-tabs{display:flex;gap:4px;margin-bottom:12px;flex-wrap:wrap}
+.mdj2-tab{padding:7px 16px;border-radius:6px 6px 0 0;font-size:12px;font-weight:600;cursor:pointer;border:1px solid #d0dce8;border-bottom:none;background:#f0f4f8;color:#555;transition:all .15s}
+.mdj2-tab.active{background:#1F4E79;color:#fff;border-color:#1F4E79}
+.mdj2-panel{background:#fff;border-radius:0 8px 8px 8px;border:1px solid #d0dce8;padding:16px;margin-bottom:14px}
+.mdj2-months{display:flex;gap:4px;flex-wrap:wrap;margin-bottom:12px}
+.mdj2-mbtn{padding:4px 10px;border-radius:4px;font-size:11px;font-weight:600;cursor:pointer;border:1px solid #d0dce8;background:#f5f5f5;color:#555;transition:all .15s}
+.mdj2-mbtn.active{background:#1F4E79;color:#fff;border-color:#1F4E79}
+.mdj2-grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.mdj2-card{background:#f8fafc;border:1px solid #e2e8f0;border-radius:7px;padding:12px}
+.mdj2-cttl{font-size:12px;font-weight:700;color:#1F4E79;margin-bottom:8px;border-bottom:1px solid #e2e8f0;padding-bottom:6px}
+.mdj2-bar-row{display:flex;align-items:center;gap:8px;margin-bottom:5px;font-size:12px}
+.mdj2-bar-lbl{width:70px;flex-shrink:0;font-weight:500;color:#333}
+.mdj2-bar-bg{flex:1;background:#e8edf2;border-radius:3px;height:7px;overflow:hidden}
+.mdj2-bar-fill{height:7px;border-radius:3px;transition:width .4s}
+.mdj2-bar-val{width:30px;text-align:right;font-weight:600;color:#1F4E79}
+.mdj2-eq-pills{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px}
+.mdj2-eq-pill{padding:5px 14px;border-radius:20px;font-size:12px;font-weight:600;cursor:pointer;border:2px solid;transition:all .15s}
+.mdj2-tbl{width:100%;border-collapse:collapse;font-size:12px}
+.mdj2-tbl th{background:#1F4E79;color:#fff;padding:7px 10px;text-align:left;font-weight:600}
+.mdj2-tbl td{padding:6px 10px;border-bottom:1px solid #e8edf2}
+.mdj2-tbl tr:hover td{background:#f5f8ff}
+@media(max-width:700px){.mdj2-grid2{grid-template-columns:1fr}}
+</style>
+<div class="mdj2">
+  <div class="mdj2-header">
+    <div>
+      <div style="font-size:15px;font-weight:700">Maniobras MDJ — Novedades por Equipo</div>
+      <div style="font-size:11px;opacity:.75;margin-top:2px">Desde Google Sheets — Novedades PAE</div>
+    </div>
+    <div id="mdj2-ts" style="font-size:11px;opacity:.7">—</div>
+  </div>
+
+  <div class="mdj2-kpis" id="mdj2-kpis"></div>
+
+  <div class="mdj2-eq-pills" id="mdj2-eq-pills"></div>
+
+  <div class="mdj2-months" id="mdj2-months"></div>
+
+  <div class="mdj2-tabs">
+    <div class="mdj2-tab active" onclick="mdj2Tab('resumen')">Resumen general</div>
+    <div class="mdj2-tab" onclick="mdj2Tab('generacion')">Generación TG</div>
+    <div class="mdj2-tab" onclick="mdj2Tab('electrico')">Sistema Eléctrico</div>
+    <div class="mdj2-tab" onclick="mdj2Tab('maniobra')">Maniobras</div>
+    <div class="mdj2-tab" onclick="mdj2Tab('detalle')">Detalle</div>
+  </div>
+
+  <div class="mdj2-panel" id="mdj2-panel">
+    <div style="color:#999;text-align:center;padding:30px">Cargando datos...</div>
+  </div>
+</div>
+</div>
+<script>
+// ── MDJ2 CONFIG ─────────────────────────────────────────────────────────────
+const MDJ2_EQUIPOS = {
+  'Equipo 1': ['Nicolas Irazu','Nicolas Irazu Jefe De Turno'],
+  'Equipo 2': ['Victor Julian Diaz Jefe De Turno','Victor J. Diaz','Victor Diaz'],
+  'Equipo 3': ['Gustavo Malo Jefe De Turno','Gustavo Malo','Gustavo Ivankovic PAE','Gustavo Malo J'],
+  'Equipo 4': ['Carlos Rodriguez Coordinador Turno Team 4','Carlos Rodriguez'],
+  'Relevo':   ['Relevo CCE','Relevo']
+};
+const MDJ2_EQ_COLORS = {
+  'Equipo 1': {bg:'#DBEAFE',border:'#2563EB',text:'#1D4ED8'},
+  'Equipo 2': {bg:'#FCE7F3',border:'#DB2777',text:'#9D174D'},
+  'Equipo 3': {bg:'#D1FAE5',border:'#059669',text:'#065F46'},
+  'Equipo 4': {bg:'#FEF3C7',border:'#D97706',text:'#92400E'},
+  'Relevo':   {bg:'#EDE9FE',border:'#7C3AED',text:'#4C1D95'}
+};
+
+let mdj2ActiveTab = 'resumen';
+let mdj2ActiveEq  = 'Todos';
+let mdj2ActiveMes = null;
+let mdj2Meses     = [];
+
+function getEquipo(remitente) {
+  if (!remitente) return 'Otros';
+  const r = remitente.trim();
+  for (const [eq, names] of Object.entries(MDJ2_EQUIPOS)) {
+    if (names.some(n => r.toLowerCase().includes(n.toLowerCase()) || n.toLowerCase().includes(r.toLowerCase()))) return eq;
+  }
+  return 'Otros';
+}
+
+function showSection(s){
+  document.getElementById('section-novedades').style.display = s==='novedades' ? 'block' : 'none';
+  document.getElementById('section-maniobras').style.display = s==='maniobras' ? 'block' : 'none';
+  document.getElementById('btn-nav-nov').style.background = s==='novedades' ? 'rgba(255,255,255,0.25)' : 'rgba(255,255,255,0.08)';
+  document.getElementById('btn-nav-man').style.background = s==='maniobras' ? 'rgba(255,255,255,0.25)' : 'rgba(255,255,255,0.08)';
+  if (s==='maniobras') mdj2Build();
+}
+
+function mdj2Build() {
+  if (!allData.length) return;
+
+  // Get all months present in data
+  const mesesSet = new Set();
+  allData.forEach(r => {
+    const p = (r['Fecha']||'').split('/');
+    if (p.length===3) mesesSet.add(`${p[1].padStart(2,'0')}/${p[2]}`);
+  });
+  mdj2Meses = [...mesesSet].sort().reverse();
+  if (!mdj2ActiveMes) mdj2ActiveMes = mdj2Meses[0] || null;
+
+  // Filtered data
+  const base = mdj2ActiveEq === 'Todos'
+    ? allData
+    : allData.filter(r => getEquipo(r['Remitente']) === mdj2ActiveEq);
+
+  const filtered = mdj2ActiveMes
+    ? base.filter(r => {
+        const p = (r['Fecha']||'').split('/');
+        return p.length===3 && `${p[1].padStart(2,'0')}/${p[2]}` === mdj2ActiveMes;
+      })
+    : base;
+
+  // Build month buttons
+  const mBtns = ['Todos los meses', ...mdj2Meses].map(m => {
+    const lbl = m === 'Todos los meses' ? m : (() => {
+      const [mm,yy] = m.split('/');
+      const names = ['','Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+      return `${names[parseInt(mm)]} ${yy.slice(-2)}`;
+    })();
+    const active = (m === 'Todos los meses' && !mdj2ActiveMes) || m === mdj2ActiveMes;
+    const val = m === 'Todos los meses' ? 'null' : `'${m}'`;
+    return `<button class="mdj2-mbtn${active?' active':''}" onclick="mdj2ActiveMes=${val};mdj2Build()">${lbl}</button>`;
+  }).join('');
+  document.getElementById('mdj2-months').innerHTML = mBtns;
+
+  // Build equipo pills
+  const allEqs = ['Todos', 'Equipo 1','Equipo 2','Equipo 3','Equipo 4','Relevo','Otros'];
+  document.getElementById('mdj2-eq-pills').innerHTML = allEqs.map(eq => {
+    const c = MDJ2_EQ_COLORS[eq] || {bg:'#f0f4f8',border:'#d0dce8',text:'#555'};
+    const active = eq === mdj2ActiveEq;
+    return `<button class="mdj2-eq-pill" style="background:${active?c.border:c.bg};border-color:${c.border};color:${active?'#fff':c.text}" onclick="mdj2ActiveEq='${eq}';mdj2Build()">${eq}</button>`;
+  }).join('');
+
+  // KPIs
+  const total   = filtered.length;
+  const gen     = filtered.filter(r=>r['Categoría']==='Generación').length;
+  const electr  = filtered.filter(r=>r['Categoría']==='Sistema Eléctrico').length;
+  const manio   = filtered.filter(r=>r['Categoría']==='Maniobra').length;
+  const disp    = filtered.filter(r=>r['Acción']==='Disparo').length;
+  document.getElementById('mdj2-kpis').innerHTML = `
+    <div class="mdj2-kpi"><div class="lbl">Total eventos</div><div class="val">${total}</div><div class="sub">${mdj2ActiveEq}</div></div>
+    <div class="mdj2-kpi" style="border-left-color:#2E75B6"><div class="lbl">Generación TG</div><div class="val" style="color:#2E75B6">${gen}</div><div class="sub">arranques·paros·disparos</div></div>
+    <div class="mdj2-kpi" style="border-left-color:#C0392B"><div class="lbl">Sist. Eléctrico</div><div class="val" style="color:#C0392B">${electr}</div><div class="sub">aperturas·cierres·recierres</div></div>
+    <div class="mdj2-kpi" style="border-left-color:#27AE60"><div class="lbl">Maniobras</div><div class="val" style="color:#27AE60">${manio}</div><div class="sub">traspasos·energizaciones</div></div>
+    <div class="mdj2-kpi" style="border-left-color:#FF6B6B"><div class="lbl">Disparos TG</div><div class="val" style="color:#8B0000">${disp}</div><div class="sub">total período</div></div>`;
+
+  document.getElementById('mdj2-ts').textContent = `${total} eventos · ${mdj2ActiveMes ? (() => {const [mm,yy]=mdj2ActiveMes.split('/');const n=['','Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];return n[parseInt(mm)]+' '+yy;})() : 'Todos los meses'}`;
+
+  // Update tabs active state
+  document.querySelectorAll('.mdj2-tab').forEach((t,i) => {
+    const tabs = ['resumen','generacion','electrico','maniobra','detalle'];
+    t.classList.toggle('active', tabs[i]===mdj2ActiveTab);
+  });
+
+  mdj2RenderTab(filtered, base);
+}
+
+function mdj2Tab(t) {
+  mdj2ActiveTab = t;
+  document.querySelectorAll('.mdj2-tab').forEach((el,i) => {
+    el.classList.toggle('active', ['resumen','generacion','electrico','maniobra','detalle'][i]===t);
+  });
+  const base = mdj2ActiveEq==='Todos' ? allData : allData.filter(r=>getEquipo(r['Remitente'])===mdj2ActiveEq);
+  const filtered = mdj2ActiveMes
+    ? base.filter(r=>{const p=(r['Fecha']||'').split('/');return p.length===3&&`${p[1].padStart(2,'0')}/${p[2]}`===mdj2ActiveMes;})
+    : base;
+  mdj2RenderTab(filtered, base);
+}
+
+function mdj2BarChart(data, color) {
+  if (!data.length) return '<div style="color:#999;padding:10px;font-size:12px">Sin datos</div>';
+  const max = data[0][1]||1;
+  return data.map(([lbl,cnt]) => `
+    <div class="mdj2-bar-row">
+      <div class="mdj2-bar-lbl" title="${lbl}">${lbl.length>10?lbl.substring(0,10)+'…':lbl}</div>
+      <div class="mdj2-bar-bg"><div class="mdj2-bar-fill" style="width:${Math.round(cnt/max*100)}%;background:${color}"></div></div>
+      <div class="mdj2-bar-val">${cnt}</div>
+    </div>`).join('');
+}
+
+function mdj2RenderTab(filtered, base) {
+  const panel = document.getElementById('mdj2-panel');
+
+  if (mdj2ActiveTab === 'resumen') {
+    // By equipo
+    const byEq = {};
+    filtered.forEach(r => {
+      const eq = getEquipo(r['Remitente']);
+      if (!byEq[eq]) byEq[eq]={total:0,gen:0,elec:0,man:0,disp:0};
+      byEq[eq].total++;
+      if(r['Categoría']==='Generación')byEq[eq].gen++;
+      if(r['Categoría']==='Sistema Eléctrico')byEq[eq].elec++;
+      if(r['Categoría']==='Maniobra')byEq[eq].man++;
+      if(r['Acción']==='Disparo')byEq[eq].disp++;
+    });
+
+    // By category/subcategory
+    const bySub = {};
+    filtered.forEach(r => {
+      const k = (r['Subcategoría']||'General');
+      bySub[k]=(bySub[k]||0)+1;
+    });
+    const subData = Object.entries(bySub).sort((a,b)=>b[1]-a[1]).slice(0,8);
+
+    const eqRows = ['Equipo 1','Equipo 2','Equipo 3','Equipo 4','Relevo','Otros']
+      .filter(eq=>byEq[eq])
+      .map(eq => {
+        const c = MDJ2_EQ_COLORS[eq]||{border:'#888',text:'#333'};
+        const d = byEq[eq];
+        return `<tr>
+          <td><span style="font-weight:700;color:${c.text}">${eq}</span></td>
+          <td style="text-align:center;font-weight:600">${d.total}</td>
+          <td style="text-align:center;color:#2E75B6">${d.gen}</td>
+          <td style="text-align:center;color:#C0392B">${d.elec}</td>
+          <td style="text-align:center;color:#27AE60">${d.man}</td>
+          <td style="text-align:center;color:#8B0000;font-weight:${d.disp>0?'700':'400'}">${d.disp||'—'}</td>
+        </tr>`;
+      }).join('');
+
+    panel.innerHTML = `
+      <div class="mdj2-grid2">
+        <div>
+          <div class="mdj2-cttl">Actividad por equipo</div>
+          <table class="mdj2-tbl">
+            <thead><tr><th>Equipo</th><th style="text-align:center">Total</th><th style="text-align:center">Gen</th><th style="text-align:center">Eléct</th><th style="text-align:center">Man</th><th style="text-align:center">Disp</th></tr></thead>
+            <tbody>${eqRows}</tbody>
+          </table>
+        </div>
+        <div>
+          <div class="mdj2-cttl">Por subcategoría</div>
+          ${mdj2BarChart(subData,'#2E75B6')}
+        </div>
+      </div>`;
+
+  } else if (mdj2ActiveTab === 'generacion') {
+    const gen = filtered.filter(r=>r['Categoría']==='Generación');
+    const byAccion = {};
+    const byTG = {};
+    gen.forEach(r => {
+      byAccion[r['Acción']]=(byAccion[r['Acción']]||0)+1;
+      (r['Equipos Involucrados']||'').split(',').forEach(eq=>{
+        eq=eq.trim();if(!eq)return;
+        if(!byTG[eq])byTG[eq]={arr:0,par:0,dis:0};
+        if(r['Acción']==='Arranque')byTG[eq].arr++;
+        else if(r['Acción']==='Paro')byTG[eq].par++;
+        else if(r['Acción']==='Disparo')byTG[eq].dis++;
+      });
+    });
+    const tgRows = Object.entries(byTG)
+      .sort((a,b)=>(b[1].arr+b[1].par+b[1].dis)-(a[1].arr+a[1].par+a[1].dis))
+      .slice(0,12)
+      .map(([tg,d])=>`<tr onclick="showTGDetail('${tg}')" style="cursor:pointer">
+        <td style="font-weight:600;color:#1F4E79">${tg}</td>
+        <td style="text-align:center;color:#27AE60">${d.arr||'—'}</td>
+        <td style="text-align:center;color:#E67E22">${d.par||'—'}</td>
+        <td style="text-align:center;color:#8B0000;font-weight:${d.dis>0?'700':'400'}">${d.dis||'—'}</td>
+        <td style="text-align:center">${d.arr+d.par+d.dis}</td>
+      </tr>`).join('');
+
+    const accionBars = Object.entries(byAccion).sort((a,b)=>b[1]-a[1]);
+    panel.innerHTML = `
+      <div class="mdj2-grid2">
+        <div>
+          <div class="mdj2-cttl">Por máquina (clic = detalle)</div>
+          <table class="mdj2-tbl">
+            <thead><tr><th>TG</th><th style="text-align:center">Arr</th><th style="text-align:center">Par</th><th style="text-align:center">Disp</th><th style="text-align:center">Total</th></tr></thead>
+            <tbody>${tgRows}</tbody>
+          </table>
+        </div>
+        <div>
+          <div class="mdj2-cttl">Por acción</div>
+          ${mdj2BarChart(accionBars,'#2E75B6')}
+        </div>
+      </div>`;
+
+  } else if (mdj2ActiveTab === 'electrico') {
+    const elec = filtered.filter(r=>r['Categoría']==='Sistema Eléctrico');
+    const bySub={}, byAcc={}, byEq={};
+    elec.forEach(r=>{
+      bySub[r['Subcategoría']||'General']=(bySub[r['Subcategoría']||'General']||0)+1;
+      byAcc[r['Acción']||'Evento']=(byAcc[r['Acción']||'Evento']||0)+1;
+      (r['Equipos Involucrados']||'').split(',').forEach(eq=>{eq=eq.trim();if(eq)byEq[eq]=(byEq[eq]||0)+1;});
+    });
+    const subBars = Object.entries(bySub).sort((a,b)=>b[1]-a[1]);
+    const accBars = Object.entries(byAcc).sort((a,b)=>b[1]-a[1]);
+    const eqBars  = Object.entries(byEq).sort((a,b)=>b[1]-a[1]).slice(0,10);
+    panel.innerHTML = `
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px">
+        <div><div class="mdj2-cttl">Por subcategoría</div>${mdj2BarChart(subBars,'#C0392B')}</div>
+        <div><div class="mdj2-cttl">Por acción</div>${mdj2BarChart(accBars,'#E67E22')}</div>
+        <div><div class="mdj2-cttl">Top equipos involucrados</div>${mdj2BarChart(eqBars,'#2E75B6')}</div>
+      </div>`;
+
+  } else if (mdj2ActiveTab === 'maniobra') {
+    const man = filtered.filter(r=>r['Categoría']==='Maniobra');
+    const bySub={}, byEq={};
+    man.forEach(r=>{
+      bySub[r['Subcategoría']||'General']=(bySub[r['Subcategoría']||'General']||0)+1;
+      const eq = getEquipo(r['Remitente']);
+      byEq[eq]=(byEq[eq]||0)+1;
+    });
+    const subBars = Object.entries(bySub).sort((a,b)=>b[1]-a[1]);
+    const eqBars  = Object.entries(byEq).sort((a,b)=>b[1]-a[1]);
+    panel.innerHTML = `
+      <div class="mdj2-grid2">
+        <div><div class="mdj2-cttl">Por subcategoría</div>${mdj2BarChart(subBars,'#27AE60')}</div>
+        <div><div class="mdj2-cttl">Por equipo</div>${mdj2BarChart(eqBars,'#2E75B6')}</div>
+      </div>`;
+
+  } else if (mdj2ActiveTab === 'detalle') {
+    const rows = filtered.slice(-100).reverse();
+    const COLORS={'Arranque':{bg:'#C6EFCE',c:'#276221'},'Paro':{bg:'#FFEB9C',c:'#7D6608'},'Disparo':{bg:'#FF9999',c:'#8B0000'},'Apertura':{bg:'#F4CCCC',c:'#660000'},'Cierre':{bg:'#D9EAD3',c:'#1E4620'},'Recierre':{bg:'#FCE4D6',c:'#843C0C'},'Falla':{bg:'#EA9999',c:'#660000'},'Maniobra':{bg:'#CFE2F3',c:'#1F4E79'},'Evento':{bg:'#F2F2F2',c:'#444'}};
+    const tbl = `<div style="overflow-x:auto"><table class="mdj2-tbl">
+      <thead><tr><th>Fecha</th><th>Hora</th><th>Equipo</th><th>Categoría</th><th>Subcategoría</th><th>Acción</th><th>Equipos</th><th>Descripción</th></tr></thead>
+      <tbody>${rows.map(r=>{
+        const eq=getEquipo(r['Remitente']);
+        const c=MDJ2_EQ_COLORS[eq]||{border:'#888',text:'#555'};
+        const ac=COLORS[r['Acción']]||COLORS['Evento'];
+        return `<tr>
+          <td style="white-space:nowrap">${r['Fecha']||''}</td>
+          <td style="white-space:nowrap">${r['Hora Evento']||''}</td>
+          <td><span style="font-size:10px;font-weight:700;color:${c.text}">${eq}</span></td>
+          <td style="font-size:11px">${r['Categoría']||''}</td>
+          <td style="font-size:11px">${r['Subcategoría']||''}</td>
+          <td><span style="background:${ac.bg};color:${ac.c};padding:1px 6px;border-radius:8px;font-size:10px;font-weight:600">${r['Acción']||''}</span></td>
+          <td style="font-size:11px;font-weight:500">${r['Equipos Involucrados']||''}</td>
+          <td style="font-size:11px;max-width:250px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${(r['Descripción']||'').replace(/"/g,'')}">${(r['Descripción']||'').substring(0,80)}</td>
+        </tr>`;
+      }).join('')}</tbody>
+    </table></div>
+    <div style="font-size:11px;color:#888;margin-top:8px">Mostrando últimos ${rows.length} de ${filtered.length} eventos</div>`;
+    panel.innerHTML = tbl;
+  }
+}
+</script>
+</body>
+</html>
